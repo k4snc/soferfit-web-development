@@ -1,31 +1,119 @@
-export function Icon({ name }: { name: "arrow" | "back" | "play" | "spark" | "calendar" | "chart" | "bolt" | "check" | "star" | "eye" | "eyeOff" | "dumbbell" | "camera" | "flame" | "clipboard" | "sliders" | "timer" | "user" | "logout" | "gear" | "close" | "pause" | "volume" | "walk" | "moon" | "book" }) {
+export function Icon({
+  name,
+}: {
+  name: "arrow" | "back" | "play" | "spark" | "calendar" | "chart" | "bolt" | "check" | "star" | "eye" | "eyeOff" | "dumbbell" | "camera" | "flame" | "clipboard" | "sliders" | "timer" | "user" | "logout" | "gear" | "close" | "pause" | "volume" | "walk" | "moon" | "book"
+}) {
   const paths = {
     arrow: <path d="M5 12h14M14 7l5 5-5 5" />,
     back: <path d="M19 12H5m5-5-5 5 5 5" />,
     play: <path d="m9 7 7 5-7 5V7Z" />,
-    spark: <path d="m12 2 1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8L12 2Z" />,
-    calendar: <><rect x="4" y="5" width="16" height="15" rx="2" /><path d="M8 3v4m8-4v4M4 10h16" /></>,
-    chart: <><path d="M5 19V9m7 10V5m7 14v-7" /><path d="M3 19h18" /></>,
+    spark: (
+      <path d="m12 2 1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8L12 2Z" />
+    ),
+    calendar: (
+      <>
+        <rect x="4" y="5" width="16" height="15" rx="2" />
+        <path d="M8 3v4m8-4v4M4 10h16" />
+      </>
+    ),
+    chart: (
+      <>
+        <path d="M5 19V9m7 10V5m7 14v-7" />
+        <path d="M3 19h18" />
+      </>
+    ),
     bolt: <path d="m13 2-8 12h7l-1 8 8-13h-7l1-7Z" />,
     check: <path d="m5 12 4 4L19 6" />,
-    star: <path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3Z" />,
-    eye: <><path d="M2.5 12s3.5-5 9.5-5 9.5 5 9.5 5-3.5 5-9.5 5-9.5-5-9.5-5Z" /><circle cx="12" cy="12" r="2.5" /></>,
-    eyeOff: <><path d="m3 3 18 18M10.6 7.2A10 10 0 0 1 12 7c6 0 9.5 5 9.5 5a14 14 0 0 1-2.1 2.5M6.4 6.4C3.9 8 2.5 12 2.5 12s3.5 5 9.5 5c1.1 0 2.2-.2 3.1-.5" /></>,
-    dumbbell: <><path d="M7 9v6M4.5 8v8M17 9v6M19.5 8v8M7 12h10" /><path d="M3 10v4m18-4v4" /></>,
-    camera: <><path d="M4 8h3l1.5-2h7L17 8h3v10H4V8Z" /><circle cx="12" cy="13" r="3" /></>,
-    flame: <path d="M13.5 2.5c.5 4-2.5 5-2 8 1-1 2-2 2.5-3 2.5 2 4 4.2 4 7a6 6 0 0 1-12 0c0-3.4 2-6.2 5.3-9-.2 2 .4 3.1 1.2 3.8.2-2.3.8-4.5 1-6.8Z" />,
-    clipboard: <><rect x="5" y="5" width="14" height="16" rx="2" /><path d="M9 5V3h6v2M9 11h6m-6 4h6" /></>,
-    sliders: <><path d="M4 7h10m4 0h2M4 17h2m4 0h10M8 14v6m8-16v6" /><circle cx="16" cy="7" r="2" /><circle cx="8" cy="17" r="2" /></>,
-    timer: <><circle cx="12" cy="13" r="8" /><path d="M12 9v4l3 2M9 2h6m-3 0v3" /></>,
-    user: <><circle cx="12" cy="8" r="4" /><path d="M4 21c.8-4.2 3.5-6 8-6s7.2 1.8 8 6" /></>,
-    logout: <><path d="M10 4H5v16h5M14 8l4 4-4 4m4-4H9" /></>,
-    gear: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3A1.7 1.7 0 0 0 10 3V2.8h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z" /></>,
+    star: (
+      <path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3Z" />
+    ),
+    eye: (
+      <>
+        <path d="M2.5 12s3.5-5 9.5-5 9.5 5 9.5 5-3.5 5-9.5 5-9.5-5-9.5-5Z" />
+        <circle cx="12" cy="12" r="2.5" />
+      </>
+    ),
+    eyeOff: (
+      <>
+        <path d="m3 3 18 18M10.6 7.2A10 10 0 0 1 12 7c6 0 9.5 5 9.5 5a14 14 0 0 1-2.1 2.5M6.4 6.4C3.9 8 2.5 12 2.5 12s3.5 5 9.5 5c1.1 0 2.2-.2 3.1-.5" />
+      </>
+    ),
+    dumbbell: (
+      <>
+        <path d="M7 9v6M4.5 8v8M17 9v6M19.5 8v8M7 12h10" />
+        <path d="M3 10v4m18-4v4" />
+      </>
+    ),
+    camera: (
+      <>
+        <path d="M4 8h3l1.5-2h7L17 8h3v10H4V8Z" />
+        <circle cx="12" cy="13" r="3" />
+      </>
+    ),
+    flame: (
+      <path d="M13.5 2.5c.5 4-2.5 5-2 8 1-1 2-2 2.5-3 2.5 2 4 4.2 4 7a6 6 0 0 1-12 0c0-3.4 2-6.2 5.3-9-.2 2 .4 3.1 1.2 3.8.2-2.3.8-4.5 1-6.8Z" />
+    ),
+    clipboard: (
+      <>
+        <rect x="5" y="5" width="14" height="16" rx="2" />
+        <path d="M9 5V3h6v2M9 11h6m-6 4h6" />
+      </>
+    ),
+    sliders: (
+      <>
+        <path d="M4 7h10m4 0h2M4 17h2m4 0h10M8 14v6m8-16v6" />
+        <circle cx="16" cy="7" r="2" />
+        <circle cx="8" cy="17" r="2" />
+      </>
+    ),
+    timer: (
+      <>
+        <circle cx="12" cy="13" r="8" />
+        <path d="M12 9v4l3 2M9 2h6m-3 0v3" />
+      </>
+    ),
+    user: (
+      <>
+        <circle cx="12" cy="8" r="4" />
+        <path d="M4 21c.8-4.2 3.5-6 8-6s7.2 1.8 8 6" />
+      </>
+    ),
+    logout: (
+      <>
+        <path d="M10 4H5v16h5M14 8l4 4-4 4m4-4H9" />
+      </>
+    ),
+    gear: (
+      <>
+        <circle cx="12" cy="12" r="3" />
+        <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3A1.7 1.7 0 0 0 10 3V2.8h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z" />
+      </>
+    ),
     close: <path d="m6 6 12 12M18 6 6 18" />,
     pause: <path d="M9 5v14m6-14v14" />,
-    volume: <><path d="M5 10v4h3l4 3V7l-4 3H5Z" /><path d="M16 9c1.5 1.7 1.5 4.3 0 6m2-8c2.8 2.8 2.8 7.2 0 10" /></>,
-    walk: <><circle cx="13" cy="4" r="2" /><path d="m10 22 2-7-3-3 2-5 4 3 3 1M6 22l3-6m5-2 3 8" /></>,
+    volume: (
+      <>
+        <path d="M5 10v4h3l4 3V7l-4 3H5Z" />
+        <path d="M16 9c1.5 1.7 1.5 4.3 0 6m2-8c2.8 2.8 2.8 7.2 0 10" />
+      </>
+    ),
+    walk: (
+      <>
+        <circle cx="13" cy="4" r="2" />
+        <path d="m10 22 2-7-3-3 2-5 4 3 3 1M6 22l3-6m5-2 3 8" />
+      </>
+    ),
     moon: <path d="M20 15.5A8.5 8.5 0 0 1 8.5 4 8.5 8.5 0 1 0 20 15.5Z" />,
-    book: <><path d="M4 5.5A3.5 3.5 0 0 1 7.5 2H11v17H7.5A3.5 3.5 0 0 0 4 22V5.5Z" /><path d="M20 5.5A3.5 3.5 0 0 0 16.5 2H13v17h3.5A3.5 3.5 0 0 1 20 22V5.5Z" /></>,
-  };
-  return <svg viewBox="0 0 24 24" aria-hidden="true">{paths[name]}</svg>;
+    book: (
+      <>
+        <path d="M4 5.5A3.5 3.5 0 0 1 7.5 2H11v17H7.5A3.5 3.5 0 0 0 4 22V5.5Z" />
+        <path d="M20 5.5A3.5 3.5 0 0 0 16.5 2H13v17h3.5A3.5 3.5 0 0 1 20 22V5.5Z" />
+      </>
+    ),
+  }
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      {paths[name]}
+    </svg>
+  )
 }
