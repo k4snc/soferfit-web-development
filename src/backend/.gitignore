@@ -1,0 +1,17 @@
+# Python / Virtual Environment
+venv/
+ENV/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Django local files
+db.sqlite3
+media/
+staticfiles/
+
+# Environment variables / Secrets
+.env
+*.sqlite3
+*.sqlite

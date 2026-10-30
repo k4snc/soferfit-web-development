@@ -6,6 +6,7 @@ import { PageHeader } from "../components/PageHeader";
 import { createFitnessStore } from "../fitnessStore";
 import type { FitnessStore } from "../fitnessStore";
 import { parseHeightCm, parseWeightKg, prettyDate } from "../lib/format";
+import { api } from "../services/api";
 
 export function ProfilePage({ store, update, toast, onLogout, onOpenGlossary }: { store: FitnessStore; update: (next: FitnessStore) => boolean; toast: (message: string, error?: boolean) => void; onLogout: () => void; onOpenGlossary: (term?: string) => void }) {
   const sectionNames = ["Account", "Body profile", "Training", "Health & safety", "Notifications", "Privacy & data", "Help"] as const;
@@ -39,7 +40,7 @@ export function ProfilePage({ store, update, toast, onLogout, onOpenGlossary }: 
     setError("");
     setEditing(null);
   };
-  const save = (section: SectionName) => {
+  const save = async (section: SectionName) => {
     setError("");
     if (section === "Account") {
       if (!user.username.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user.email)) return setError("Enter a name and valid email.");
@@ -58,11 +59,60 @@ export function ProfilePage({ store, update, toast, onLogout, onOpenGlossary }: 
       if (!heightCm || heightCm < 100 || heightCm > 250) return setError(`Height must be between ${user.unitSystem === "metric" ? "100–250 cm" : "approximately 3 ft 3 in–8 ft 2 in"}.`);
       if (!weightKg || weightKg < 25 || weightKg > 300 || (targetKg && (targetKg < 25 || targetKg > 300))) return setError(`Weight must be between ${user.unitSystem === "metric" ? "25–300 kg" : "55–661 lb"}.`);
       if (!user.somatotype || !user.goal || !user.experience || !user.activityLevel) return setError("Complete each body profile selection.");
+
+      try {
+        await api.saveOnboarding({
+          name: user.username,
+          age: user.age,
+          height: user.height,
+          currentWeight: user.weight,
+          targetWeight: user.targetWeight,
+          unitSystem: user.unitSystem,
+          somatotype: user.somatotype,
+          goal: user.goal,
+          experience: user.experience,
+          activity: user.activityLevel,
+          workoutDays: String(challenge.daysPerWeek),
+          sessionLength: String(challenge.sessionMinutes),
+          focusArea: "General Fitness",
+          mode: "Standard",
+          equipment: user.equipment,
+          challengeDays: challenge.length as 60 | 90,
+          hasCondition: user.injuryFlag,
+        });
+      } catch (err) {
+        console.error("Failed to sync body profile with backend:", err);
+      }
     }
     if (section === "Training") {
       const minutes = durationChoice === "custom" ? Number(customDuration) : Number(durationChoice);
       if (challenge.daysPerWeek < 2 || challenge.daysPerWeek > 6 || minutes < 5 || minutes > 180) return setError("Choose 2–6 workout days and a session duration from 5–180 minutes.");
       setChallenge({ ...challenge, sessionMinutes: minutes });
+      
+      try {
+        await api.saveOnboarding({
+          name: user.username,
+          age: user.age,
+          height: user.height,
+          currentWeight: user.weight,
+          targetWeight: user.targetWeight,
+          unitSystem: user.unitSystem,
+          somatotype: user.somatotype,
+          goal: user.goal,
+          experience: user.experience,
+          activity: user.activityLevel,
+          workoutDays: String(challenge.daysPerWeek),
+          sessionLength: String(minutes),
+          focusArea: "General Fitness",
+          mode: "Standard",
+          equipment: user.equipment,
+          challengeDays: challenge.length as 60 | 90,
+          hasCondition: user.injuryFlag,
+        });
+      } catch (err) {
+        console.error("Failed to sync training preferences with backend:", err);
+      }
+
       if (!update({ ...store, user, challenge: { ...challenge, sessionMinutes: minutes }, preferences })) return;
     } else if (!update({ ...store, user, challenge, preferences })) return;
     setPasswords({ current: "", next: "", confirm: "" });

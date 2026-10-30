@@ -5,6 +5,7 @@ import { InfoTip } from "../components/InfoTip";
 import { LogoMark } from "../components/LogoMark";
 import { glossaryTerms } from "../data/glossary";
 import { emailPattern, parseHeightCm, parseWeightKg } from "../lib/format";
+import { api } from "../services/api";
 import type { Activity, Experience, Goal, SignupAnswers, SignupEquipment, UnitSystem } from "../types";
 
 export function SignupModal({
@@ -370,7 +371,7 @@ export function SignupModal({
                     </div>
                   </section>
                   <section>
-                    <div className="signup-review-group-head"><span>FOCUS &amp; GEAR</span><button type="button" onClick={() => editStep(2)}>Edit</button></div>
+                    <div className="signup-review-group-head"><span>FOCUS & GEAR</span><button type="button" onClick={() => editStep(2)}>Edit</button></div>
                     <div className="signup-review-values">
                       <p><small>Primary goal</small><strong>{answers.goal}</strong></p>
                       <p><small>Experience level</small><strong>{answers.experience}</strong></p>
@@ -410,7 +411,56 @@ export function SignupModal({
           </div>
 
           {step <= 3 && <footer className="signup-actions"><button className="signup-back-link" type="button" onClick={goBack}>Back</button><Button onClick={goNext} disabled={!stepValid}>{returnToReview ? "Return to review" : "Next"}</Button></footer>}
-          {step === 4 && <footer className="signup-actions signup-review-actions"><button className="signup-back-link" type="button" onClick={goBack}>Back</button><div><Button onClick={() => { setGenerationProgress(0); setGenerationStatus(0); setStep(5); }}>Generate My Plan</Button><small>AI generation is limited. This uses one of your plan generations.</small></div></footer>}
+          
+          {step === 4 && (
+            <footer className="signup-actions signup-review-actions">
+              <button className="signup-back-link" type="button" onClick={goBack}>Back</button>
+              <div>
+                <Button 
+                  onClick={async () => {
+                    try {
+                      // 1. Register user account on Django backend
+                      await api.register(answers.email, answers.password);
+
+                      // 2. Save onboarding profile data to Django backend
+                      await api.saveOnboarding({
+                        name: answers.name,
+                        age: answers.age,
+                        height: answers.height,
+                        currentWeight: answers.weight,
+                        targetWeight: answers.targetWeight,
+                        unitSystem: answers.unitSystem,
+                        somatotype: answers.somatotype,
+                        goal: answers.goal,
+                        experience: answers.experience,
+                        activity: answers.activity,
+                        workoutDays: String(answers.workoutDays),
+                        sessionLength: String(answers.sessionMinutes ?? 30),
+                        focusArea: answers.focusArea || "General Fitness",
+                        mode: answers.mode || "Standard",
+                        equipment: answers.availableEquipment,
+                        challengeDays: answers.challengeDays!,
+                        targetTimeline: answers.targetTimeline,
+                        hasCondition: answers.hasCondition,
+                      });
+
+                      // 3. Trigger generation state animation
+                      setGenerationProgress(0);
+                      setGenerationStatus(0);
+                      setStep(5);
+                    } catch (error) {
+                      console.error("Backend integration failed during signup:", error);
+                      alert("Could not connect to the backend server. Make sure Django is running.");
+                    }
+                  }}
+                >
+                  Generate My Plan
+                </Button>
+                <small>AI generation is limited. This uses one of your plan generations.</small>
+              </div>
+            </footer>
+          )}
+
           {step === 6 && <footer className="signup-actions signup-reveal-actions"><Button onClick={() => onComplete(answers)}>Dashboard <Icon name="arrow" /></Button></footer>}
         </div>
 
