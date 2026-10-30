@@ -37,11 +37,17 @@ export function DashboardPage({ path, navigate, onHome, onLogout, profile }: { p
   };
   const challengeStart = new Date(`${store.challenge.startDate}T12:00:00`);
   const challengeDay = Math.max(1, Math.min(store.challenge.length, Math.floor((Date.now() - challengeStart.getTime()) / 86_400_000) + 1));
+  
   const logout = async () => {
-    await api.logout();
+    try {
+      await api.logout();
+    } catch (err) {
+      console.error("Backend logout failed, clearing local session anyway:", err);
+    }
     clearFitnessStore();
     onLogout();
   };
+
   if (activePath.startsWith("/session/")) {
     const workout = store.plan.find((item) => item.id === decodeURIComponent(activePath.split("/").pop() || ""));
     return workout ? <><SessionPlayer workout={workout} store={store} update={update} navigate={navigate} toast={showToast} />{toast && <div className={`app-toast ${toast.error ? "error" : ""}`}>{toast.message}</div>}</> : <main className="session-player"><EmptyState title="Workout not found" copy="Return to your plan and choose another workout." /><Button onClick={() => navigate("/workouts")}>Back to workouts</Button></main>;
