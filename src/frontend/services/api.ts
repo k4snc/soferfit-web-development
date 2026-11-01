@@ -48,42 +48,79 @@ export type FitnessProfile = {
   injury_status: string;
 };
 
-const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, "");
+const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, "") || "";
 const STORAGE_KEY = "soferfit-member";
 const ACCESS_TOKEN_KEY = "access_token";
 const REFRESH_TOKEN_KEY = "refresh_token";
 
+/**
+ * Robust request wrapper with safe JSON parsing, network error handling, 
+ * and detailed Django DRF error extraction.
+ */
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const token = localStorage.getItem(ACCESS_TOKEN_KEY);
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(options?.headers as Record<string, string>),
   };
-
+  
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers,
-  });
-
-  if (!response.ok) {
-    throw new Error("We couldn't process your request. Please check your credentials or network.");
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}${path}`, {
+      ...options,
+      headers,
+    });
+  } catch (netErr) {
+    throw new Error("Network error: Unable to reach the backend server. Please check your connection.");
   }
 
-  // Handle empty responses (e.g., 205 Reset Content / 204 No Content for logout)
+  // Handle empty responses (e.g. 204 No Content, 205 Reset Content)
   if (response.status === 204 || response.status === 205) {
     return {} as T;
   }
 
-  return response.json() as Promise<T>;
+  const text = await response.text();
+  let data: any = {};
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    data = { detail: text || "Invalid server response format." };
+  }
+
+  if (!response.ok) {
+    let errorMsg = "We couldn't process your request. Please check your credentials or network.";
+    
+    if (typeof data === "object" && data !== null) {
+      if (data.detail) {
+        errorMsg = typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail);
+      } else {
+        // Extract Django field-level validation errors cleanly
+        const fieldErrors = Object.entries(data)
+          .map(([field, errs]) => `${field}: ${Array.isArray(errs) ? errs.join(", ") : errs}`)
+          .join(" | ");
+        if (fieldErrors) {
+          errorMsg = fieldErrors;
+        }
+      }
+    }
+    throw new Error(errorMsg);
+  }
+
+  return data as T;
 }
 
 function readLocalMember(): Member | null {
-  const stored = localStorage.getItem(STORAGE_KEY);
-  return stored ? (JSON.parse(stored) as Member) : null;
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    return stored ? (JSON.parse(stored) as Member) : null;
+  } catch {
+    localStorage.removeItem(STORAGE_KEY);
+    return null;
+  }
 }
 
 export const api = {
@@ -93,13 +130,42 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ email, password }),
       });
-      
-      // If backend returns JWT tokens and user object, cache them
-      if (data && typeof data === "object" && "access" in data && data.access) {
+      if ("access" in data && data.access) {
         localStorage.setItem(ACCESS_TOKEN_KEY, data.access);
-        if (data.refresh) localStorage.setItem(REFRESH_TOKEN_KEY, data.refresh);
       }
-      return ("user" in data && data.user ? data.user : data) as Member;
+      if ("refresh" in data && data.refresh) {
+        localStorage.setItem(REFRESH_TOKEN_KEY, data.refresh);
+      }
+      const member = "user" in data && data.user ? data.user : (data as Member);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(member));
+      return member;
+    }
+    
+    // Local fallback
+    const member: Member = {
+      id: crypto.randomUUID(),
+      email,
+      createdAt: new Date().toISOString(),
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(member));
+    return member;
+  },
+
+  async login(email: string, password: string): Promise<Member> {
+    if (API_URL) {
+      const data = await request<{ access: string; refresh: string; user?: Member }>("/auth/login/", {
+        method: "POST",
+        body: JSON.stringify({ email, password }),
+      });
+      if (data.access) {
+        localStorage.setItem(ACCESS_TOKEN_KEY, data.access);
+      }
+      if (data.refresh) {
+        localStorage.setItem(REFRESH_TOKEN_KEY, data.refresh);
+      }
+      const member = data.user ?? { id: 1, email, createdAt: new Date().toISOString() };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(member));
+      return member;
     }
 
     const member: Member = {
@@ -111,45 +177,27 @@ export const api = {
     return member;
   },
 
-  async login(email: string, password: string): Promise<{ access: string; refresh: string } | { success: true }> {
-    if (API_URL) {
-      // Django SimpleJWT login endpoint
-      const data = await request<{ access: string; refresh: string }>("/login/", {
-        method: "POST",
-        body: JSON.stringify({ email, password }),
-      });
+  async saveOnboarding(profile: OnboardingProfile): Promise<FitnessProfile> {
+    const unitSystem = profile.unitSystem ?? "metric";
+    const data = {
+      age: Number(profile.age),
+      height: parseHeightCm(profile.height, unitSystem),
+      current_weight: parseWeightKg(profile.currentWeight, unitSystem),
+      target_weight: profile.targetWeight ? parseWeightKg(profile.targetWeight, unitSystem) : null,
+      body_type: profile.somatotype,
+      fitness_level: profile.experience,
+      fitness_goal: profile.goal,
+      exercise_frequency: Number(profile.workoutDays),
+      workout_duration: profile.sessionLength,
+      available_equipment: profile.equipment,
+      challenge_choice: profile.challengeDays,
+      activity_level: profile.activity ?? "",
+      unit_system: unitSystem,
+      target_timeline: profile.targetTimeline ?? "",
+      injury_status: profile.hasCondition ? "Injury or health condition reported" : "",
+    };
 
-      if (data.access) {
-        localStorage.setItem(ACCESS_TOKEN_KEY, data.access);
-      }
-      if (data.refresh) {
-        localStorage.setItem(REFRESH_TOKEN_KEY, data.refresh);
-      }
-      return data;
-    }
-    return { success: true };
-  },
-
-  async saveOnboarding(profile: OnboardingProfile): Promise<FitnessProfile | Member> {
     if (API_URL) {
-      const unitSystem = profile.unitSystem ?? "metric";
-      const data = {
-        age: Number(profile.age),
-        height: parseHeightCm(profile.height, unitSystem),
-        current_weight: parseWeightKg(profile.currentWeight, unitSystem),
-        target_weight: profile.targetWeight ? parseWeightKg(profile.targetWeight, unitSystem) : null,
-        body_type: profile.somatotype,
-        fitness_level: profile.experience,
-        fitness_goal: profile.goal,
-        exercise_frequency: Number(profile.workoutDays),
-        workout_duration: profile.sessionLength,
-        available_equipment: profile.equipment,
-        challenge_choice: profile.challengeDays,
-        activity_level: profile.activity ?? "",
-        unit_system: unitSystem,
-        target_timeline: profile.targetTimeline ?? "",
-        injury_status: profile.hasCondition ? "Injury or health condition reported" : "",
-      };
       return request<FitnessProfile>("/me/onboarding/", {
         method: "PUT",
         body: JSON.stringify(data),
@@ -163,7 +211,7 @@ export const api = {
     };
     const member = { ...current, profile };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(member));
-    return member;
+    return data as unknown as FitnessProfile;
   },
 
   async getMember(): Promise<Member | null> {
@@ -177,7 +225,7 @@ export const api = {
     }
     return null;
   },
-  
+
   async postSession(sessionData: {
     workoutId: string;
     date: string;
