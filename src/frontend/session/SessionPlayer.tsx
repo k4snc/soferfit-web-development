@@ -3,6 +3,7 @@ import { Button } from "../components/Button";
 import { Icon } from "../components/Icon";
 import type { FitnessStore, PlannedWorkout } from "../fitnessStore";
 import { dateKey } from "../lib/format";
+import { api } from "../services/api";
 
 export function SessionPlayer({ workout, store, update, navigate, toast }: { workout: PlannedWorkout; store: FitnessStore; update: (next: FitnessStore) => void; navigate: (path: string) => void; toast: (message: string) => void }) {
   type PlayerScreen = "ready" | "countdown" | "active" | "complete";
@@ -69,7 +70,7 @@ export function SessionPlayer({ workout, store, update, navigate, toast }: { wor
         oscillator.stop(context.currentTime + delay + .1);
       });
     } catch {
-      // Sound is an enhancement; the visible phase labels remain the source of truth.
+      // Sound is an enhancement
     }
   };
   const announce = (message: string) => {
@@ -125,11 +126,34 @@ export function SessionPlayer({ workout, store, update, navigate, toast }: { wor
     setRunIndex(next);
     setRemaining(runningSegments[next].duration);
   };
-  const saveSession = (partial = false, destination = "/dashboard") => {
+
+  const saveSession = async (partial = false, destination = "/dashboard") => {
     const completedExercises = workout.exercises.slice(0, Math.min(workout.exercises.length, exerciseIndex + (partial ? 1 : workout.exercises.length))).map((exercise, index) => sessionSwaps[index] || exercise.name);
     const existing = store.sessions.some((session) => session.workoutId === workout.id && session.date === dateKey(new Date()));
+    
+    const sessionPayload = {
+      workoutId: workout.id,
+      date: dateKey(new Date()),
+      duration: Math.max(1, Math.round(elapsed / 60)),
+      exercisesDone: completedExercises,
+      effort,
+      note,
+      distance: distance ? Number(distance) : undefined,
+      isCompleted: !partial,
+    };
+
+    // 1. Post live session log to Django backend
+    try {
+      if (api.postSession) {
+        await api.postSession(sessionPayload);
+      }
+    } catch (error) {
+      console.error("Backend failed to save workout session:", error);
+    }
+
+    // 2. Update local state store & metrics
     if (!existing) {
-      const sessions = [...store.sessions, { workoutId: workout.id, date: dateKey(new Date()), duration: Math.max(1, Math.round(elapsed / 60)), exercisesDone: completedExercises, effort }];
+      const sessions = [...store.sessions, sessionPayload];
       const completionDates = new Set(sessions.map((session) => session.date));
       let currentStreak = 0;
       const cursor = new Date();
