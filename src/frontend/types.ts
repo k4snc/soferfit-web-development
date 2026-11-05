@@ -1,4 +1,46 @@
-export type Muscle = "Chest" | "Shoulders" | "Biceps" | "Triceps" | "Forearms" | "Core" | "Quads" | "Calves";
+export type Muscle = 
+  | "Chest" 
+  | "Shoulders" 
+  | "Biceps" 
+  | "Triceps" 
+  | "Forearms" 
+  | "Core" 
+  | "Quads" 
+  | "Calves"
+  | "Abs"
+  | "Deltoids"
+  | "Feet"
+  | "Forearm"
+  | "Gluteal"
+  | "Hamstring"
+  | "Hands"
+  | "Head"
+  | "Knees"
+  | "Lower Back"
+  | "Obliques"
+  | "Quadriceps"
+  | "Tibialis"
+  | "Trapezius"
+  | "Upper Back"
+  // New muscle groups from reference library
+  | "Rotator Cuff"
+  | "Serratus"
+  | "Rhomboids"
+  // Sub-groups and regions
+  | "Ankles"
+  | "Adductors"
+  | "Neck"
+  | "Hip Flexors"
+  | "Upper Chest"
+  | "Lower Chest"
+  | "Inner Quad"
+  | "Outer Quad"
+  | "Upper Abs"
+  | "Lower Abs"
+  | "Front Deltoid"
+  | "Rear Deltoid"
+  | "Upper Trapezius"
+  | "Lower Trapezius";
 
 export type Gender = "Man" | "Woman";
 
