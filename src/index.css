@@ -163,57 +163,30 @@ svg { width: 1.1em; height: 1.1em; fill: none; stroke: currentColor; stroke-widt
 .segmented button { border: 0; border-radius: 999px; padding: .65rem 1.4rem; color: var(--muted); background: transparent; font-size: .72rem; }
 .segmented button.active { color: var(--white); background: var(--ink); }
 .body-wrap { position: relative; z-index: 1; display: flex; height: 100%; flex-direction: column; align-items: center; justify-content: center; }
-.body-svg, .body-svg path, .body-svg g { outline: none; -webkit-tap-highlight-color: transparent; }
-.body-svg { width: 300px; height: 490px; filter: drop-shadow(0 20px 20px rgba(16,18,15,.1)); user-select: none; }
-.body-svg.orientation-back { transform: scaleX(-1); }
-.body-base { fill: #b9b9b0; stroke: #96998e; stroke-width: 1; }
-.body-lines { stroke: rgba(255,255,255,.45); stroke-width: 1; }
-
-.muscle-zone { 
-  fill: #96988e; 
-  stroke: rgba(255,255,255,.25); 
-  stroke-width: 1; 
-  cursor: pointer; 
-  outline: none; 
-  transition: fill 0.2s ease-in-out, filter 0.2s ease-in-out, transform 0.2s ease-in-out; 
+.body-map-chart {
+  --bm-background-opacity: 0;
+  --bm-max-height: 100%;
+  --bm-max-width: 290px;
+  --bm-padding: 0;
+  --bm-region-inactive-opacity: 1;
+  --bm-region-stroke: rgba(255,255,255,.68);
+  --bm-region-stroke-selected: #d8ff52;
+  --bm-region-stroke-focus: #d8ff52;
+  --bm-region-stroke-width: .12;
+  --bm-region-stroke-width-selected: .35;
+  --bm-region-stroke-width-focus: .45;
+  --bm-region-active-shadow: drop-shadow(0 0 1px rgba(249,115,22,.55));
+  --bm-region-focus-shadow: drop-shadow(0 0 1.5px rgba(255,255,255,.95)) drop-shadow(0 0 2.5px rgba(15,23,42,.9));
+  width: 100%;
+  height: 100%;
+  min-height: 0;
 }
-
-.muscle-zone:hover,
-.muscle-zone.hovered { 
-  fill: #f97316; 
-  filter: drop-shadow(0 0 6px rgba(249, 115, 22, 0.6));
-  outline: none; 
-}
-
-.muscle-zone:focus { 
-  outline: none; 
-}
-
-.muscle-zone:focus-visible { 
-  outline: none; 
-  stroke: var(--lime); 
-  stroke-width: 2.5; 
-}
-
-.muscle-zone.selected { 
-  fill: #ea580c; 
-  filter: drop-shadow(0 0 8px rgba(234, 88, 12, 0.8)); 
-}
-
-.muscle-zone.full-body-selected { 
-  fill: var(--lime); 
-  filter: drop-shadow(0 0 4px rgba(216,255,82,.55)); 
-}
-
-.body-svg.is-disabled .muscle-zone { 
-  cursor: default; 
-  pointer-events: none; 
-}
-
-.body-svg.is-disabled .muscle-zone:hover {
-  fill: #96988e;
-  filter: none;
-}
+.body-map-chart .body-chart-container { padding: 0 !important; }
+.body-map-chart .body-chart-svg { width: 280px !important; max-width: 100%; max-height: 100%; filter: drop-shadow(0 20px 20px rgba(16,18,15,.1)); user-select: none; }
+.body-map-chart .body-chart-muscle[aria-pressed="true"] { fill: #ea580c !important; }
+.body-map-chart:not(.is-disabled) .body-chart-muscle:hover { fill: #f97316 !important; fill-opacity: 1 !important; }
+.body-map-chart .body-chart-muscle:focus-visible { outline: none; }
+.body-map-chart .gender-hair-detail { fill: #66685f; stroke: rgba(255,255,255,.55); stroke-width: .14; stroke-linejoin: round; }
 
 .map-hint { 
   position: absolute; 
@@ -661,7 +634,7 @@ footer { margin-top: 120px; padding: 34px 0 0; color: var(--white); background: 
   .section-heading { margin-bottom: 2.5rem; }
   .section-heading h2, .challenge h2, .features h2 { font-size: 2.8rem; }
   .map-panel { padding: 1rem; }
-  .body-svg { width: 250px; }
+  .body-map-chart .body-chart-svg { width: 250px !important; height: auto; }
   .exercise-panel { padding: 0; }
   .explorer-controls, .filter-group { width: 100%; }
   .filter-pills { overflow-x: auto; flex-wrap: nowrap; justify-content: flex-start; }
