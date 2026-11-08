@@ -107,7 +107,7 @@ test("detailed front and back muscles select matching routines", async ({
 
   await page
     .locator(".focus-orientation-row")
-    .getByRole("button", { name: "Back" })
+    .getByRole("button", { name: "Back", exact: true })
     .click()
   await expect(page.locator(".gender-hair-detail")).toHaveCount(1)
 
@@ -144,10 +144,16 @@ test("detailed front and back muscles select matching routines", async ({
   await upperTrapezius.click()
 
   await expect(page.locator(".routine-state-head h3")).toHaveText(
-    "Upper Trapezius",
+    "Upper Chest + Upper Trapezius",
   )
 
   await expect(upperTrapezius).toHaveAttribute("aria-pressed", "true")
+  await expect(
+    page.getByRole("button", { name: "Left Trapezius (Mid)" }),
+  ).toHaveAttribute("aria-pressed", "false")
+  await expect(
+    page.getByRole("button", { name: "Left Trapezius (Lower)" }),
+  ).toHaveAttribute("aria-pressed", "false")
 
   await page.getByRole("button", { name: "Generate workout routine" }).click()
 
@@ -155,5 +161,240 @@ test("detailed front and back muscles select matching routines", async ({
 
   await expect(
     page.locator(".result-card .exercise-name strong").first(),
-  ).toHaveText("Scapular push-up")
+  ).toHaveText("Incline push-up")
+})
+
+test("multiple muscle groups combine, deduplicate, and can be removed", async ({
+  page,
+}) => {
+  await page.goto("/")
+  await page.locator("#explore").scrollIntoViewIfNeeded()
+
+  await page.getByRole("button", { name: "Left Biceps" }).click()
+  await expect(page.locator(".routine-state-head h3")).toHaveText("Biceps")
+  await expect(page.locator(".selected-muscle")).toHaveCount(1)
+
+  await page.getByRole("button", { name: "Right Biceps" }).click()
+  await expect(page.locator(".routine-state-head h3")).toHaveText(
+    "No focus area selected",
+  )
+
+  await page.getByRole("button", { name: "Left Biceps" }).click()
+  await page.getByRole("button", { name: "Remove Biceps focus" }).click()
+  await expect(page.locator(".routine-state-head h3")).toHaveText(
+    "No focus area selected",
+  )
+
+  await page.getByRole("button", { name: "Full Body", exact: true }).click()
+  await expect(page.locator(".routine-state-head h3")).toHaveText("Full Body")
+  await expect(page.locator(".selected-muscle")).toHaveCount(0)
+  await page.getByRole("button", { name: "Full Body", exact: true }).click()
+
+  const chest = page.getByRole("button", {
+    name: "Left Lower Chest (Sternal)",
+  })
+  const upperAbs = page.getByRole("button", { name: "Left Abs (Upper)" })
+  await chest.click()
+  await upperAbs.click()
+
+  await expect(page.locator(".routine-state-head h3")).toHaveText(
+    "Chest + Upper Abs",
+  )
+  await expect(chest).toHaveAttribute("aria-pressed", "true")
+  await expect(upperAbs).toHaveAttribute("aria-pressed", "true")
+  await expect(page.locator(".selected-muscle")).toHaveCount(2)
+
+  await page.getByRole("button", { name: "Generate workout routine" }).click()
+  await expect(page.locator(".routine-results")).toBeVisible()
+  await expect(page.locator(".routine-results-head")).toContainText(
+    "Chest + Upper Abs",
+  )
+  await expect(
+    page.locator(".result-card .exercise-name strong"),
+  ).toContainText(["Tempo push-up", "Crunch"])
+  await expect(page.locator(".muscle-tag")).toContainText([
+    "Chest",
+    "Upper Abs",
+  ])
+})
+
+test("suggests Full Body for broad coverage without changing focus automatically", async ({
+  page,
+}) => {
+  await page.goto("/")
+  await page.locator("#explore").scrollIntoViewIfNeeded()
+
+  await page.getByRole("button", { name: "Left Lower Chest (Sternal)" }).click()
+  await page.getByRole("button", { name: "Left Abs (Upper)" }).click()
+  await page.getByRole("button", { name: "Left Biceps" }).click()
+  await page.getByRole("button", { name: "Left Quadriceps" }).click()
+
+  await expect(page.locator(".routine-state-head h3")).toHaveText(
+    "Chest + Upper Abs + Biceps + Quads",
+  )
+  const suggestion = page.getByRole("status")
+  await expect(suggestion).toContainText("upper body, core, and lower body")
+  await expect(suggestion).toContainText(
+    "Choose Full Body if you want one broad session",
+  )
+  await expect(
+    suggestion.getByRole("button", { name: "Switch to Full Body" }),
+  ).toBeVisible()
+  await expect(page.locator(".selected-muscle")).toHaveCount(4)
+
+  await suggestion.getByRole("button", { name: "Switch to Full Body" }).click()
+
+  await expect(page.locator(".routine-state-head h3")).toHaveText("Full Body")
+  await expect(page.getByRole("button", { name: "Full Body", exact: true })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  )
+  await expect(page.locator(".selected-muscle")).toHaveCount(0)
+  await expect(page.getByRole("status")).toHaveCount(0)
+})
+
+test("mobile focus and split controls fit the viewport and work by keyboard", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 812 })
+  await page.goto("/")
+  await page.locator("#explore").scrollIntoViewIfNeeded()
+
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => document.documentElement.scrollWidth <= window.innerWidth,
+      ),
+    )
+    .toBe(true)
+
+  const splits = page.getByRole("group", { name: "Training split" })
+  const ppl = splits.getByRole("button", { name: "Push/Pull/Legs" })
+  await ppl.focus()
+  await page.keyboard.press("Space")
+  await expect(ppl).toHaveAttribute("aria-pressed", "true")
+  await expect(page.getByRole("group", { name: "Split session" })).toBeVisible()
+
+  const biceps = page.getByRole("button", { name: "Left Biceps" })
+  await biceps.focus()
+  await page.keyboard.press("Space")
+  await expect(biceps).toHaveAttribute("aria-pressed", "true")
+  await expect(page.locator(".routine-state-head h3")).toContainText("Biceps")
+  await expect(page.locator(".selected-muscles")).toHaveAttribute(
+    "role",
+    "list",
+  )
+  await expect(page.locator(".sr-only")).toContainText("Biceps")
+})
+
+test("split presets load editable muscle targets for each session", async ({
+  page,
+}) => {
+  await page.goto("/")
+  await page.locator("#explore").scrollIntoViewIfNeeded()
+
+  await page.getByRole("button", { name: "Push/Pull/Legs" }).click()
+  await expect(page.locator(".routine-state-head h3")).toHaveText(
+    "Chest + Front Deltoid + Triceps",
+  )
+  await expect(
+    page.getByRole("group", { name: "Split session" }).getByRole("button", {
+      name: "Push",
+    }),
+  ).toHaveAttribute("aria-pressed", "true")
+
+  await page.getByRole("button", { name: "Pull", exact: true }).click()
+  await expect(page.locator(".routine-state-head h3")).toHaveText(
+    "Upper Lats + Mid Lats + Lower Lats + Upper Trapezius + Mid Trapezius + Lower Trapezius + Rear Deltoid + Biceps + Forearms + Lower Back",
+  )
+  await expect(
+    page.getByRole("button", { name: "Remove Upper Lats focus" }),
+  ).toBeVisible()
+
+  await page
+    .locator(".focus-orientation-row")
+    .getByRole("button", { name: "Back", exact: true })
+    .click()
+  await expect(page.getByRole("button", { name: "Left Lats (Upper)" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  )
+  await expect(page.getByRole("button", { name: "Erector Spinae Left" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  )
+  await expect(page.locator(".split-session-status")).toHaveText("Active session: Pull")
+  await expect(page.locator(".split-guidance")).toContainText(
+    "Switching sessions replaces your current selections, including map edits.",
+  )
+
+  await page.getByRole("button", { name: "Upper/Lower" }).click()
+  await expect(page.locator(".routine-state-head h3")).toHaveText(
+    "Chest + Front Deltoid + Rear Deltoid + Upper Lats + Mid Lats + Lower Lats + Upper Trapezius + Mid Trapezius + Lower Trapezius + Biceps + Triceps + Forearms",
+  )
+  await expect(
+    page.getByRole("group", { name: "Split session" }).getByRole("button", {
+      name: "Upper",
+    }),
+  ).toHaveAttribute("aria-pressed", "true")
+  await page.getByRole("button", { name: "Lower", exact: true }).click()
+  await expect(page.locator(".routine-state-head h3")).toHaveText(
+    "Quads + Hamstring + Gluteal + Calves + Lower Back",
+  )
+
+  await page.getByRole("button", { name: "Custom", exact: true }).click()
+  await expect(page.locator(".routine-state-head h3")).toHaveText(
+    "Quads + Hamstring + Gluteal + Calves + Lower Back",
+  )
+  await expect(page.getByRole("group", { name: "Split session" })).toHaveCount(0)
+})
+
+test("back map targets upper, middle, and lower lats and traps separately", async ({
+  page,
+}) => {
+  await page.goto("/")
+  await page.locator("#explore").scrollIntoViewIfNeeded()
+  await page
+    .locator(".focus-orientation-row")
+    .getByRole("button", { name: "Back", exact: true })
+    .click()
+
+  await page.getByRole("button", { name: "Left Lats (Upper)" }).click()
+  await expect(page.locator(".routine-state-head h3")).toHaveText("Upper Lats")
+  await expect(page.getByRole("button", { name: "Left Lats (Upper)" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  )
+  await expect(page.getByRole("button", { name: "Left Lats (Mid)" })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  )
+  await expect(page.getByRole("button", { name: "Left Lats (Lower)" })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  )
+
+  await page.getByRole("button", { name: "Left Trapezius (Mid)" }).click()
+  await expect(page.locator(".routine-state-head h3")).toHaveText(
+    "Upper Lats + Mid Trapezius",
+  )
+  await expect(
+    page.getByRole("button", { name: "Left Trapezius (Mid)" }),
+  ).toHaveAttribute("aria-pressed", "true")
+  await expect(
+    page.getByRole("button", { name: "Left Trapezius (Upper)" }),
+  ).toHaveAttribute("aria-pressed", "false")
+  await expect(
+    page.getByRole("button", { name: "Left Trapezius (Lower)" }),
+  ).toHaveAttribute("aria-pressed", "false")
+
+  await page.getByRole("button", { name: "Generate workout routine" }).click()
+  await expect(page.locator(".routine-results")).toBeVisible()
+  await expect(
+    page.locator(".result-card .exercise-name strong"),
+  ).toContainText(["Assisted pull-up", "Prone T raise"])
+  await expect(page.locator(".muscle-tag")).toContainText([
+    "Upper Lats",
+    "Mid Trapezius",
+  ])
 })

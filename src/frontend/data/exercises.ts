@@ -33,11 +33,23 @@ export const exercises: Record<Muscle, { bodyweight: string; gym: string; level:
     { bodyweight: "Prone Y-T raise", gym: "Cable rear-delt fly", level: "Intermediate", reps: "3 × 10" },
     { bodyweight: "Reverse plank reach", gym: "Face pull", level: "Intermediate", reps: "3 × 12" },
   ],
-  "Latissimus Dorsi": [
-    { bodyweight: "Doorway row", gym: "Lat pulldown", level: "Beginner", reps: "3 × 10" },
-    { bodyweight: "Prone lat pull-down", gym: "Seated cable row", level: "Beginner", reps: "3 × 12" },
-    { bodyweight: "Inverted row", gym: "Single-arm dumbbell row", level: "Intermediate", reps: "3 × 10" },
-    { bodyweight: "Towel row", gym: "Assisted pull-up", level: "Intermediate", reps: "3 × 8" },
+  "Upper Lats": [
+    { bodyweight: "Assisted pull-up", gym: "Wide-grip lat pulldown", level: "Beginner", reps: "3 × 8" },
+    { bodyweight: "Prone lat pulldown", gym: "Neutral-grip lat pulldown", level: "Beginner", reps: "3 × 10" },
+    { bodyweight: "Doorway high row", gym: "Half-kneeling single-arm pulldown", level: "Intermediate", reps: "3 × 10" },
+    { bodyweight: "Inverted row", gym: "Assisted pull-up", level: "Intermediate", reps: "3 × 8" },
+  ],
+  "Mid Lats": [
+    { bodyweight: "Inverted row", gym: "Seated cable row", level: "Beginner", reps: "3 × 10" },
+    { bodyweight: "Single-arm towel row", gym: "Single-arm dumbbell row", level: "Beginner", reps: "3 × 10" },
+    { bodyweight: "Doorway row", gym: "Chest-supported row", level: "Intermediate", reps: "3 × 10" },
+    { bodyweight: "Bent-over backpack row", gym: "Close-grip seated row", level: "Intermediate", reps: "3 × 12" },
+  ],
+  "Lower Lats": [
+    { bodyweight: "Straight-arm band pulldown", gym: "Straight-arm cable pulldown", level: "Beginner", reps: "3 × 12" },
+    { bodyweight: "Kneeling band pulldown", gym: "Half-kneeling one-arm cable pulldown", level: "Beginner", reps: "3 × 10" },
+    { bodyweight: "Single-arm band pulldown", gym: "Single-arm low cable row", level: "Intermediate", reps: "3 × 10" },
+    { bodyweight: "Prone lat sweep", gym: "Dumbbell pullover", level: "Intermediate", reps: "3 × 12" },
   ],
   Biceps: [
     { bodyweight: "Self-resisted curl", gym: "Dumbbell curl", level: "Beginner", reps: "3 × 12" },
@@ -87,6 +99,12 @@ export const exercises: Record<Muscle, { bodyweight: string; gym: string; level:
     { bodyweight: "Prone Y raise", gym: "Barbell shrug", level: "Beginner", reps: "3 × 12" },
     { bodyweight: "Wall slide", gym: "Cable shrug", level: "Intermediate", reps: "3 × 12" },
     { bodyweight: "Bear-crawl shoulder shrug", gym: "Farmer carry", level: "Intermediate", reps: "3 × 30s" },
+  ],
+  "Mid Trapezius": [
+    { bodyweight: "Prone T raise", gym: "Chest-supported row with pause", level: "Beginner", reps: "3 × 12" },
+    { bodyweight: "Band pull-apart", gym: "Seated cable row with retraction", level: "Beginner", reps: "3 × 12" },
+    { bodyweight: "Inverted row with squeeze", gym: "Face pull", level: "Intermediate", reps: "3 × 12" },
+    { bodyweight: "Prone W raise", gym: "Reverse pec deck", level: "Intermediate", reps: "3 × 10" },
   ],
   "Lower Trapezius": [
     { bodyweight: "Prone Y raise", gym: "Incline bench Y raise", level: "Beginner", reps: "3 × 12" },

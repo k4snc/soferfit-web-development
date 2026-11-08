@@ -46,9 +46,9 @@ function focusForRegion(id: MuscleId): Muscle | null {
 
   if (id === "nape") return "Upper Trapezius"
 
-  if (id.startsWith("traps-mid-") || id.startsWith("traps-lower-")) {
-    return "Lower Trapezius"
-  }
+  if (id.startsWith("traps-mid-")) return "Mid Trapezius"
+
+  if (id.startsWith("traps-lower-")) return "Lower Trapezius"
 
   if (id.startsWith("biceps-")) return "Biceps"
 
@@ -62,7 +62,11 @@ function focusForRegion(id: MuscleId): Muscle | null {
     return "Forearms"
   }
 
-  if (id.startsWith("lats-")) return "Latissimus Dorsi"
+  if (id.startsWith("lats-upper-")) return "Upper Lats"
+
+  if (id.startsWith("lats-mid-")) return "Mid Lats"
+
+  if (id.startsWith("lats-lower-")) return "Lower Lats"
 
   if (id.startsWith("lower-back-") || id === "spine") return "Lower Back"
 
@@ -96,32 +100,31 @@ function focusForRegion(id: MuscleId): Muscle | null {
 
 function isSelectedFocus(
   regionFocus: Muscle | null,
-  selected: Muscle | null,
+  selected: Muscle[],
 ): boolean {
-  if (!regionFocus || !selected) return false
+  if (!regionFocus || selected.length === 0) return false
 
-  if (regionFocus === selected) return true
-
-  if (selected === "Chest") return regionFocus === "Upper Chest"
-
-  if (selected === "Core") {
-    return ["Upper Abs", "Lower Abs", "Obliques"].includes(regionFocus)
-  }
-
-  if (selected === "Shoulders") {
-    return [
-      "Front Deltoid",
-      "Rear Deltoid",
-      "Upper Trapezius",
-      "Lower Trapezius",
-    ].includes(regionFocus)
-  }
-
-  return false
+  return selected.some((muscle) => {
+    if (regionFocus === muscle) return true
+    if (muscle === "Chest") return regionFocus === "Upper Chest"
+    if (muscle === "Core") {
+      return ["Upper Abs", "Lower Abs", "Obliques"].includes(regionFocus)
+    }
+    if (muscle === "Shoulders") {
+      return [
+        "Front Deltoid",
+        "Rear Deltoid",
+        "Upper Trapezius",
+        "Mid Trapezius",
+        "Lower Trapezius",
+      ].includes(regionFocus)
+    }
+    return false
+  })
 }
 
 function createBodyState(
-  selected: Muscle | null,
+  selected: Muscle[],
   fullBody: boolean,
 ): BodyState {
   const bodyState: BodyState = {}
@@ -152,7 +155,7 @@ export function BodyMap({
 
   orientation: Orientation
 
-  selected: Muscle | null
+  selected: Muscle[]
 
   fullBody: boolean
 
@@ -262,7 +265,7 @@ export function BodyMap({
         }`}
         aria-label={`${gender} muscle map`}
       />
-      <span className={`map-hint ${selected || fullBody ? "hidden" : ""}`}>
+      <span className={`map-hint ${selected.length > 0 || fullBody ? "hidden" : ""}`}>
         {hoveredRegion || "Choose a muscle group to focus your routine"}
       </span>
     </div>

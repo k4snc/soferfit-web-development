@@ -156,6 +156,16 @@ svg { width: 1.1em; height: 1.1em; fill: none; stroke: currentColor; stroke-widt
 .filter-pills { display: flex; flex-wrap: wrap; gap: .35rem; padding: .3rem; border: 1px solid var(--line); border-radius: 1rem; background: var(--white); }
 .filter-pills > button, .pill-with-info > button:first-child { border: 0; border-radius: 999px; padding: .65rem .85rem; color: var(--muted); background: transparent; font-size: .66rem; white-space: nowrap; }
 .filter-pills > button.active, .pill-with-info > button:first-child.active { color: var(--white); background: var(--ink); }
+.selected-muscles { display: flex; flex-wrap: wrap; gap: .35rem; }
+.selected-muscle { display: inline-flex; align-items: center; gap: .35rem; padding: .3rem .4rem .3rem .65rem; border-radius: 999px; color: var(--violet); background: var(--violet-light); font-size: .6rem; font-weight: 700; }
+.selected-muscle button { width: 1.15rem; height: 1.15rem; display: grid; place-items: center; border: 0; border-radius: 50%; color: inherit; background: rgb(255 255 255 / 70%); font-size: .85rem; line-height: 1; }
+.full-body-suggestion { display: grid; justify-items: start; gap: .4rem; padding: .65rem .75rem; border: 1px solid var(--line); border-radius: .75rem; color: var(--muted); background: var(--paper); font-size: .65rem; line-height: 1.4; }
+.full-body-suggestion button { padding: 0; border: 0; color: var(--ink); background: transparent; font-size: .65rem; font-weight: 800; text-decoration: underline; text-underline-offset: .15em; }
+.split-session-status { color: var(--ink); font-size: .65rem; }
+.split-session-status strong { font-weight: 800; }
+.split-guidance { color: var(--muted); font-size: .62rem; line-height: 1.4; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.filter-pills button:focus-visible, .selected-muscle button:focus-visible, .full-body-suggestion button:focus-visible { outline: 2px solid var(--violet); outline-offset: 2px; }
 .explorer-grid { display: grid; grid-template-columns: .95fr 1.05fr; width: 100%; height: 630px; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--white); }
 .map-panel { z-index: 1; background: #edece4; position: relative; padding: 2rem; overflow: hidden; }
 .map-panel:before { content: ""; position: absolute; width: 410px; height: 410px; border: 1px solid rgba(16,18,15,.08); border-radius: 50%; left: 50%; top: 53%; transform: translate(-50%,-50%); box-shadow: 0 0 0 60px rgba(255,255,255,.2), 0 0 0 120px rgba(255,255,255,.13); }
@@ -638,6 +648,13 @@ footer { margin-top: 120px; padding: 34px 0 0; color: var(--white); background: 
   .exercise-panel { padding: 0; }
   .explorer-controls, .filter-group { width: 100%; }
   .filter-pills { overflow-x: auto; flex-wrap: nowrap; justify-content: flex-start; }
+  .filter-pills > button { min-height: 2.75rem; }
+  .selected-muscles { gap: .45rem; }
+  .selected-muscle { min-height: 2.5rem; }
+  .selected-muscle button { width: 1.5rem; height: 1.5rem; }
+  .full-body-suggestion { font-size: .7rem; }
+  .full-body-suggestion button { min-height: 2.75rem; }
+  .split-guidance { max-width: 42rem; font-size: .68rem; }
   .focus-control { align-items: flex-start; flex-direction: column; }
   .exercise-item { grid-template-columns: 1.7rem 3rem 1fr auto; }
   .exercise-demo { width: 3rem; height: 3rem; }

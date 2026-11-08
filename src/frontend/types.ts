@@ -7,12 +7,15 @@ export type Muscle =
   | "Biceps"
   | "Triceps"
   | "Forearms"
-  | "Latissimus Dorsi"
+  | "Upper Lats"
+  | "Mid Lats"
+  | "Lower Lats"
   | "Core"
   | "Upper Abs"
   | "Lower Abs"
   | "Obliques"
   | "Upper Trapezius"
+  | "Mid Trapezius"
   | "Lower Trapezius"
   | "Quads"
   | "Hamstring"
@@ -25,6 +28,10 @@ export type Gender = "Man" | "Woman";
 export type Orientation = "Front" | "Back";
 
 export type TrainingMode = "Fat Loss & Cardio" | "HIIT" | "Muscle & Strength";
+
+export type TrainingSplit = "Custom" | "Push/Pull/Legs" | "Upper/Lower";
+
+export type SplitSession = "Push" | "Pull" | "Legs" | "Upper" | "Lower";
 
 export type Equipment = "No Equipment / Bodyweight" | "Gym Equipment";
 
@@ -44,7 +51,7 @@ export type SignupAnswers = {
   password: string;
   avatarUrl: string;
   unitSystem: UnitSystem;
-  focusArea: Muscle | "Full Body";
+  focusArea: string;
   mode: TrainingMode;
   equipment: Equipment;
   age: string;
