@@ -31,7 +31,39 @@ The base URL includes `/api`; the frontend appends endpoint paths such as `/logi
 
 ## Muscle map
 
-The map uses [`@emmorts/body-muscles`](https://www.npmjs.com/package/@emmorts/body-muscles) to render selectable front and back anatomical regions. Those regions map to SoferFit's local workout-focus categories, which can be selected together to create a combined set of exercise suggestions. Upper, middle, and lower lats and trapezius regions have separate focus categories and exercise suggestions. Clicking an already-selected group toggles it off; selected focus groups can also be removed individually. Mirrored body regions map to the same group. Optional Push/Pull/Legs and Upper/Lower split presets load editable recommended focus groups for a session; switching sessions replaces the selected targets, and Custom preserves the current selection. When targets span upper body, core, and lower body, the app neutrally offers Full Body as an option without claiming the targets form a balanced plan or switching automatically. Full Body remains an exclusive selection. The Man/Woman selector retains a subtle decorative hair distinction; it does not change the anatomy data. The map has interactive selection and hover styling, but no heatmap or intensity feature.
+The routine explorer combines an interactive muscle map with local exercise suggestions. Its main implementation is in `src/frontend/components/BodyMap.tsx` (anatomical map and focus mapping), `src/frontend/hooks/useExplorer.ts` (selection and preset state), `src/frontend/data/exercises.ts` (suggestion data), and `src/frontend/pages/LandingPage.tsx` (controls and presentation).
+
+### Selecting muscle targets
+
+- The map displays front or back views. Selecting an anatomical region adds its mapped focus group; selecting it again toggles that group off. The selected-focus chips also let users remove a group directly.
+- The left and right sides of a mirrored region map to the same focus group. Selecting either side therefore highlights both sides and produces one set of suggestions for that group.
+- Back targets distinguish upper, middle, and lower lats and trapezius. Chest, abs, shoulders, forearms, glutes, hamstrings, calves, quads, and lower back map to their corresponding focus categories; smaller anatomical regions are grouped as documented by `focusForRegion` in `BodyMap.tsx`.
+- Selecting **Full Body** clears individual groups and uses the dedicated Full Body suggestion list. It can be toggled off by choosing it again or replaced by selecting an individual map region.
+- Exercise suggestions for multiple targets are combined from the local data. The explorer uses up to four entries per selected focus group, chooses the bodyweight or gym variant according to the equipment setting, and consolidates duplicate exercise names while adding all relevant focus tags. Full Body uses its own equipment-specific exercise list.
+
+### Training splits and sessions
+
+The split selector provides **Custom**, **Push/Pull/Legs**, and **Upper/Lower**. Selecting a split preset automatically loads its first session. Session targets are recommended starting points, not locked selections; users can add or remove groups using the map and focus chips.
+
+| Split | Session | Initial focus groups |
+|---|---|---|
+| Push/Pull/Legs | Push | Chest, Front Deltoid, Triceps |
+| Push/Pull/Legs | Pull | Upper/Mid/Lower Lats, Upper/Mid/Lower Trapezius, Rear Deltoid, Biceps, Forearms, Lower Back |
+| Push/Pull/Legs | Legs | Quads, Hamstring, Gluteal, Calves |
+| Upper/Lower | Upper | Chest, Front/Rear Deltoid, Upper/Mid/Lower Lats, Upper/Mid/Lower Trapezius, Biceps, Triceps, Forearms |
+| Upper/Lower | Lower | Quads, Hamstring, Gluteal, Calves, Lower Back |
+
+Changing sessions replaces the current targets, including manual edits; the interface explains this next to the active-session indicator. Selecting **Custom** hides session choices and retains the current targets. These controls configure one session at a time: they do not create or save a weekly schedule, assign rest days, or track progression.
+
+### Full Body suggestion
+
+When at least one selected focus group belongs to each of the explorer's upper-body, core, and lower-body categories, it offers Full Body as an optional alternative. This is a simple category-coverage heuristic, not a training assessment: it does not evaluate exercise volume, session balance, recovery, or suitability, and it never changes the selection automatically. The category definitions are `UPPER_BODY_FOCUS`, `CORE_FOCUS`, and `LOWER_BODY_FOCUS` in `useExplorer.ts`.
+
+### Accessibility, responsiveness, and scope
+
+The anatomical regions are keyboard-operable controls. The map supports Tab focus, Enter/Space activation, arrow-key region navigation, and Home/End navigation; the visible controls expose their selected state to assistive technology. Focus-group changes are announced, and individual focus chips have descriptive removal labels. At narrow widths, filter controls can scroll horizontally and have larger touch targets.
+
+The Man/Woman model choice adds a subtle decorative hair detail only; it does not change the anatomical data. The explorer has hover and selected-region styling, but no heatmap, intensity tracking, saved workout plan, or backend persistence for its muscle-map selections. Exercise suggestions and split definitions are frontend data, not an AI-generated or trainer-validated program.
 
 The library's license and attribution are recorded in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and [licenses/BODY-MUSCLES-APACHE-2.0.txt](licenses/BODY-MUSCLES-APACHE-2.0.txt).
 
