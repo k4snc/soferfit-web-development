@@ -8,7 +8,13 @@ import { LogoMark } from "../components/LogoMark";
 import { ReviewCarousel } from "../components/ReviewCarousel";
 import { clearFitnessStore } from "../fitnessStore";
 import { api } from "../services/api";
-import type { Gender, Orientation, SignupAnswers, TrainingMode } from "../types";
+import type {
+  Gender,
+  Orientation,
+  SignupAnswers,
+  TrainingMode,
+  TrainingSplit,
+} from "../types";
 import type { useExplorer } from "../hooks/useExplorer";
 
 type LandingPageProps = {
@@ -49,6 +55,9 @@ export function LandingPage({
     setOrientation,
     selected,
     fullBody,
+    trainingSplit,
+    splitSession,
+    splitSessions,
     mode,
     equipment,
     routineState,
@@ -61,10 +70,14 @@ export function LandingPage({
     explorerWeight,
     setExplorerWeight,
     focusArea,
+    shouldSuggestFullBody,
     list,
     metricErrors,
     selectMuscle,
+    removeMuscle,
     selectFullBody,
+    updateTrainingSplit,
+    updateSplitSession,
     updateMode,
     updateEquipment,
   } = explorer;
@@ -211,15 +224,65 @@ export function LandingPage({
                 <div className="routine-state-scroll">
                   <div className="routine-controls">
                     <div className="control-row focus-orientation-row">
-                      <div className="filter-group">
+                      <div className="filter-group" role="group" aria-label="Muscle focus">
                         <small>FOCUS AREA</small>
-                        <div className="filter-pills"><button className={fullBody ? "active" : ""} onClick={selectFullBody}>Full Body</button></div>
+                        <div className="filter-pills">
+                          <button
+                            className={fullBody ? "active" : ""}
+                            aria-pressed={fullBody}
+                            onClick={selectFullBody}
+                          >
+                            Full Body
+                          </button>
+                        </div>
+                        {selected.length > 0 && (
+                          <div
+                            className="selected-muscles"
+                            role="list"
+                            aria-label="Selected muscle groups"
+                          >
+                            {selected.map((muscle) => (
+                              <span
+                                className="selected-muscle"
+                                role="listitem"
+                                key={muscle}
+                              >
+                                {muscle}
+                                <button
+                                  type="button"
+                                  aria-label={`Remove ${muscle} focus`}
+                                  onClick={() => removeMuscle(muscle)}
+                                >
+                                  ×
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {shouldSuggestFullBody && (
+                          <div className="full-body-suggestion" role="status">
+                            <span>
+                              Your targets span upper body, core, and lower body.
+                              Choose Full Body if you want one broad session.
+                            </span>
+                            <button type="button" onClick={selectFullBody}>
+                              Switch to Full Body
+                            </button>
+                          </div>
+                        )}
                       </div>
                       <div className="filter-group">
                         <small>ORIENTATION</small>
-                        <div className="filter-pills">
+                        <div className="filter-pills" role="group" aria-label="Body-map orientation">
                           {(["Front", "Back"] as Orientation[]).map((item) => (
-                            <button key={item} className={orientation === item ? "active" : ""} onClick={() => setOrientation(item)}>{item}</button>
+                            <button
+                              key={item}
+                              className={orientation === item ? "active" : ""}
+                              aria-pressed={orientation === item}
+                              onClick={() => setOrientation(item)}
+                            >
+                              {item}
+                            </button>
                           ))}
                         </div>
                       </div>
@@ -227,9 +290,16 @@ export function LandingPage({
                     <div className="control-row model-metrics-row">
                       <div className="filter-group">
                         <small>MODEL</small>
-                        <div className="filter-pills">
+                        <div className="filter-pills" role="group" aria-label="Body-map model">
                           {(["Man", "Woman"] as Gender[]).map((item) => (
-                            <button key={item} className={gender === item ? "active" : ""} onClick={() => setGender(item)}>{item}</button>
+                            <button
+                              key={item}
+                              className={gender === item ? "active" : ""}
+                              aria-pressed={gender === item}
+                              onClick={() => setGender(item)}
+                            >
+                              {item}
+                            </button>
                           ))}
                         </div>
                       </div>
@@ -240,22 +310,91 @@ export function LandingPage({
                       </div>
                     </div>
                     <div className="filter-group">
+                      <small>TRAINING SPLIT</small>
+                      <div className="filter-pills" role="group" aria-label="Training split">
+                        {(["Custom", "Push/Pull/Legs", "Upper/Lower"] as TrainingSplit[]).map((split) => (
+                          <button
+                            key={split}
+                            className={trainingSplit === split ? "active" : ""}
+                            aria-pressed={trainingSplit === split}
+                            onClick={() => updateTrainingSplit(split)}
+                          >
+                            {split}
+                          </button>
+                        ))}
+                      </div>
+                      {splitSession && (
+                        <>
+                          <small>SESSION</small>
+                          <div
+                            className="filter-pills"
+                            role="group"
+                            aria-label="Split session"
+                            aria-describedby="split-session-help"
+                          >
+                            {splitSessions.map((session) => (
+                              <button
+                                key={session}
+                                className={splitSession === session ? "active" : ""}
+                                aria-pressed={splitSession === session}
+                                onClick={() => updateSplitSession(session)}
+                              >
+                                {session}
+                              </button>
+                            ))}
+                          </div>
+                          <span className="split-session-status">
+                            Active session: <strong>{splitSession}</strong>
+                          </span>
+                          <span className="split-guidance" id="split-session-help">
+                            Recommended focus groups are preselected and editable. Switching sessions replaces your current selections, including map edits.
+                          </span>
+                        </>
+                      )}
+                    </div>
+                    <div className="filter-group">
                       <small className="label-with-info">TRAINING <InfoTip term="Training" definition="Defines routine intensity and rep schemes." actionLabel="View Glossary" showTerm={false} onLearnMore={() => openGlossary("Fat Loss & Cardio")} /></small>
-                      <div className="filter-pills">
+                      <div className="filter-pills" role="group" aria-label="Training mode">
                         {(["Fat Loss & Cardio", "HIIT", "Muscle & Strength"] as TrainingMode[]).map((item) => (
-                          <button key={item} className={mode === item ? "active" : ""} onClick={() => updateMode(item)}>{item}</button>
+                          <button
+                            key={item}
+                            className={mode === item ? "active" : ""}
+                            aria-pressed={mode === item}
+                            onClick={() => updateMode(item)}
+                          >
+                            {item}
+                          </button>
                         ))}
                       </div>
                     </div>
                     <div className="filter-group">
                       <small className="label-with-info">EQUIPMENT <InfoTip term="Equipment" definition="Choose whether your routine should use only your body weight or common gym equipment." actionLabel="View Glossary" onLearnMore={() => openGlossary("Bodyweight")} /></small>
-                      <div className="filter-pills">
-                        <button className={equipment === "No Equipment / Bodyweight" ? "active" : ""} onClick={() => updateEquipment("No Equipment / Bodyweight")}>Bodyweight / Home</button>
-                        <button className={equipment === "Gym Equipment" ? "active" : ""} onClick={() => updateEquipment("Gym Equipment")}>Gym Equipment</button>
+                      <div className="filter-pills" role="group" aria-label="Equipment">
+                        <button
+                          className={equipment === "No Equipment / Bodyweight" ? "active" : ""}
+                          aria-pressed={equipment === "No Equipment / Bodyweight"}
+                          onClick={() => updateEquipment("No Equipment / Bodyweight")}
+                        >
+                          Bodyweight / Home
+                        </button>
+                        <button
+                          className={equipment === "Gym Equipment" ? "active" : ""}
+                          aria-pressed={equipment === "Gym Equipment"}
+                          onClick={() => updateEquipment("Gym Equipment")}
+                        >
+                          Gym Equipment
+                        </button>
                       </div>
                     </div>
                   </div>
                 </div>
+                <span className="sr-only" aria-live="polite" aria-atomic="true">
+                  {fullBody
+                    ? "Full Body focus selected."
+                    : selected.length
+                      ? `Selected muscle groups: ${selected.join(", ")}.`
+                      : "No muscle groups selected."}
+                </span>
                 <div className="routine-state-action">
                   <Button disabled={!focusArea || !mode || !equipment} onClick={() => setRoutineState("loading")}>Generate workout routine </Button>
                   <small>AI generation is limited, use wisely.</small>

@@ -1,10 +1,37 @@
-export type Muscle = "Chest" | "Shoulders" | "Biceps" | "Triceps" | "Forearms" | "Core" | "Quads" | "Calves";
+export type Muscle =
+  | "Chest"
+  | "Upper Chest"
+  | "Shoulders"
+  | "Front Deltoid"
+  | "Rear Deltoid"
+  | "Biceps"
+  | "Triceps"
+  | "Forearms"
+  | "Upper Lats"
+  | "Mid Lats"
+  | "Lower Lats"
+  | "Core"
+  | "Upper Abs"
+  | "Lower Abs"
+  | "Obliques"
+  | "Upper Trapezius"
+  | "Mid Trapezius"
+  | "Lower Trapezius"
+  | "Quads"
+  | "Hamstring"
+  | "Calves"
+  | "Gluteal"
+  | "Lower Back";
 
 export type Gender = "Man" | "Woman";
 
 export type Orientation = "Front" | "Back";
 
 export type TrainingMode = "Fat Loss & Cardio" | "HIIT" | "Muscle & Strength";
+
+export type TrainingSplit = "Custom" | "Push/Pull/Legs" | "Upper/Lower";
+
+export type SplitSession = "Push" | "Pull" | "Legs" | "Upper" | "Lower";
 
 export type Equipment = "No Equipment / Bodyweight" | "Gym Equipment";
 
@@ -24,7 +51,7 @@ export type SignupAnswers = {
   password: string;
   avatarUrl: string;
   unitSystem: UnitSystem;
-  focusArea: Muscle | "Full Body";
+  focusArea: string;
   mode: TrainingMode;
   equipment: Equipment;
   age: string;

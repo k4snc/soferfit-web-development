@@ -153,7 +153,7 @@ export const api = {
 
   async login(email: string, password: string): Promise<Member> {
     if (API_URL) {
-      const data = await request<{ access: string; refresh: string; user?: Member }>("/auth/login/", {
+      const data = await request<{ access: string; refresh: string; user?: Member }>("/login/", {
         method: "POST",
         body: JSON.stringify({ email, password }),
       });
