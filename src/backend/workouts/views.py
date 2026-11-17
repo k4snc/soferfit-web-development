@@ -1,15 +1,45 @@
 from django.shortcuts import render
+from django.db import transaction
 from datetime import date
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
+from rest_framework.views import APIView
 from accounts.permissions import IsContentAdmin
-from .models import Exercise, Workout, Program, ProgramDay, UserChallenge, WorkoutSession
+from .models import Exercise, Workout, Program, ProgramDay, UserChallenge, WorkoutSession, SavedWorkoutPlan
 from .serializers import (
     ExerciseSerializer, WorkoutSerializer, 
-    ProgramSerializer, ProgramDaySerializer, UserChallengeSerializer, WorkoutSessionSerializer, PhysicalProgressSerializer, PhysicalProgress
+    ProgramSerializer, ProgramDaySerializer, UserChallengeSerializer, WorkoutSessionSerializer, SavedWorkoutPlanSerializer, PhysicalProgressSerializer, PhysicalProgress
 )
+
+
+class SavedWorkoutPlanView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        plan = SavedWorkoutPlan.objects.filter(user=request.user).first()
+        return Response({
+            "plan": SavedWorkoutPlanSerializer(plan).data if plan else None,
+        })
+
+    def put(self, request):
+        serializer = SavedWorkoutPlanSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        with transaction.atomic():
+            plan, created = SavedWorkoutPlan.objects.update_or_create(
+                user=request.user,
+                defaults=serializer.validated_data,
+            )
+        return Response(
+            {"plan": SavedWorkoutPlanSerializer(plan).data},
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+        )
+
+    def delete(self, request):
+        SavedWorkoutPlan.objects.filter(user=request.user).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 class ExerciseViewSet(viewsets.ModelViewSet):
     queryset = Exercise.objects.all().order_by('-created_at')

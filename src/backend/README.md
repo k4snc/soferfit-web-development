@@ -11,8 +11,15 @@ py -3.13 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
+Copy-Item .env.example .env
 python manage.py migrate
 python manage.py runserver
+```
+
+Before starting Django, replace `DJANGO_SECRET_KEY` in `.env` with a locally generated value:
+
+```powershell
+python -c "import secrets; print(secrets.token_urlsafe(50))"
 ```
 
 The API is then available at `http://127.0.0.1:8000/api/`. Django admin is at `http://127.0.0.1:8000/admin/`.
@@ -43,7 +50,31 @@ DB_PORT=5432
 
 PostgreSQL must be installed and running when `DB_NAME` is set. Otherwise, omit these variables and use SQLite.
 
-**Development-only configuration:** the current settings use a hard-coded Django secret key, `DEBUG=True`, an empty `ALLOWED_HOSTS`, and allow all CORS origins. Do not expose this configuration as a production service. Production use requires proper secret management and environment-specific host, debug, and CORS settings.
+### Security configuration
+
+The backend requires `DJANGO_SECRET_KEY` in all environments. Keep `.env` private; never commit it or use the example placeholder as a real key. `DJANGO_ENV` accepts `development`, `test`, or `production`. Development defaults to `DEBUG=True`; production defaults to `DEBUG=False` and fails to start if the secret key, explicit allowed hosts, or HTTPS CORS origins are missing. Production also enables secure session/CSRF cookies, HTTPS redirects, and one-year HSTS by default.
+
+For production, set these values in the hosting provider's secret/configuration store rather than committing them:
+
+| Variable | Production guidance |
+| --- | --- |
+| `DJANGO_ENV` | `production` |
+| `DJANGO_SECRET_KEY` | Unique, randomly generated secret with at least 50 characters |
+| `DJANGO_DEBUG` | `False` |
+| `DJANGO_ALLOWED_HOSTS` | Comma-separated exact API hostnames; do not use `*` |
+| `CORS_ALLOWED_ORIGINS` | Comma-separated HTTPS frontend origins |
+| `DJANGO_SECURE_SSL_REDIRECT` | Keep `True` when Django can detect HTTPS correctly |
+| `DJANGO_HSTS_SECONDS` | Defaults to `31536000` in production; enable only after HTTPS is working |
+| `EMAIL_HOST`, `EMAIL_PORT` | SMTP server and port for production email |
+| `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD` | SMTP credentials, if required by the provider |
+| `EMAIL_USE_TLS`, `EMAIL_USE_SSL` | Use the transport mode required by the provider; never enable both |
+| `DEFAULT_FROM_EMAIL` | Verified sender address for production email |
+
+If TLS terminates at a reverse proxy, configure Django's trusted-proxy HTTPS detection only for the actual trusted proxy; otherwise HTTPS redirects can loop or trust spoofed headers. CORS should list only the deployed frontend origins. The login and registration endpoints have per-IP DRF throttles; DRF's default in-memory cache is process-local, so production deployments with multiple workers or instances should use a shared cache and edge-level abuse protection.
+
+`python manage.py check --deploy` may report `security.W005` and `security.W021`: HSTS is enabled for the API host, but subdomain coverage and browser preload are intentionally off by default. Enable them only after confirming every affected subdomain permanently supports HTTPS and your organization is ready for browser preload.
+
+The checked-in `.env.example` is for local development. It explicitly allows the local Vite origins and disables HTTPS-only cookie/redirect settings for local HTTP. Do not deploy it as production configuration.
 
 ## Migrations and sample data
 
@@ -108,6 +139,16 @@ Additional implemented actions:
 
 Exercise and workout reads are public; their create/update/delete operations require the content-admin permission. Program reads are public; program writes and `add_day` require content-admin permission. Challenge, session, and progress resources are scoped to the authenticated user. See `accounts/urls.py`, `workouts/urls.py`, and their viewsets for serializer fields and permission details.
 
+### Saved dashboard workout plan
+
+| Method | Route | Access | Purpose |
+| --- | --- | --- | --- |
+| `GET` | `/api/workouts/plan/` | Authenticated | Return the current user's saved plan as `{"plan": ...}`, or `{"plan": null}` if none exists |
+| `PUT` | `/api/workouts/plan/` | Authenticated | Create or replace the current user's one saved plan |
+| `DELETE` | `/api/workouts/plan/` | Authenticated | Delete the current user's saved plan; returns `204 No Content` |
+
+The `PUT` body contains `start_date` (ISO date), `duration_days` (`60` or `90`), `days_per_week` (`1`–`7`), `session_minutes` (`5`–`180`), and a `schedule` list. Each scheduled workout includes an ID, date, name, duration, equipment, target tags, and one or more exercises; optional intensity, low-impact, sets, and recovery flags are supported. Workout IDs must be unique within a plan. The endpoint stores schedule data for the signed-in user and does not create workout-session or progress records. The frontend maps the API's snake_case fields to its camelCase model.
+
 ## Frontend connection
 
 The Vite frontend reads `VITE_API_URL` at build/dev-server startup. Set it to the API prefix, not to an individual route:
@@ -128,11 +169,13 @@ python manage.py check
 python manage.py test
 ```
 
-The Django test modules currently contain no substantive test cases. The frontend Playwright suite includes browser tests and optional full-stack flows. To run those with the backend, keep Django running in one terminal and, from the repository root in another terminal, configure the API URL and run the test:
+The backend tests cover authentication throttling, logout token handling, workout-session ownership, and saved-plan authentication, validation, and per-user access. The frontend Playwright suite includes browser tests and optional full-stack flows. To run those with the backend, keep Django running in one terminal and, from the repository root in another terminal, configure the API URL and run the test:
 
 ```powershell
 $env:VITE_API_URL = "http://127.0.0.1:8000/api"
 npx playwright test
 ```
 
-Playwright starts Vite, not Django; the backend must already be running. The tests in `test/soferfit-flow.spec.ts` perform API assertions only when `VITE_API_URL` is set. See the repository-root README for frontend checks and the login regression test.
+Playwright starts Vite, not Django; the backend must already be running. The tests in `test/soferfit-flow.spec.ts` perform API assertions—including saving and resuming a workout plan—when `VITE_API_URL` is set. Without that variable, they verify browser-only demo mode instead. The workflow at `.github/workflows/ci.yml` starts Django with its runner-local SQLite database before running Playwright against the API.
+
+See the repository-root README for frontend checks and the login regression test.

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "../components/Button";
 import { EmptyState } from "../components/EmptyState";
 import { GlossaryDrawer } from "../components/GlossaryDrawer";
@@ -18,13 +18,31 @@ import type { SignupAnswers } from "../types";
 
 export function DashboardPage({ path, navigate, onHome, onLogout, profile }: { path?: string; navigate: (path: string) => void; onHome: () => void; onLogout: () => void; profile: SignupAnswers | null }) {
   const activePath = typeof path === "string" && path.length > 0 ? path : window.location.pathname || "/dashboard";
+  const backendConfigured = api.isBackendConfigured();
   const [store, setStore] = useState(() => readFitnessStore(profile));
+  const localStoreRef = useRef(store);
+  const planRevisionRef = useRef(0);
+  const saveQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const [planSyncStatus, setPlanSyncStatus] = useState<"local" | "loading" | "saving" | "saved" | "error">(
+    backendConfigured ? "loading" : "local",
+  );
+  const [planSyncError, setPlanSyncError] = useState("");
+  const [planSyncReady, setPlanSyncReady] = useState(!backendConfigured);
+  const [planDirty, setPlanDirty] = useState(false);
+  const [planSyncRetry, setPlanSyncRetry] = useState(0);
   const [toast, setToast] = useState<{ message: string; error?: boolean } | null>(null);
   const [profileGlossary, setProfileGlossary] = useState<{ open: boolean; term?: string }>({ open: false });
   const update = (next: FitnessStore) => {
     try {
+      const planChanged = next.plan !== localStoreRef.current.plan
+        || next.challenge !== localStoreRef.current.challenge;
       writeFitnessStore(next);
+      localStoreRef.current = next;
       setStore(next);
+      if (planChanged) {
+        planRevisionRef.current += 1;
+        setPlanDirty(true);
+      }
       return true;
     } catch {
       setToast({ message: "We couldn't save that change. Try a smaller image or free some browser storage.", error: true });
@@ -35,6 +53,90 @@ export function DashboardPage({ path, navigate, onHome, onLogout, profile }: { p
     setToast({ message, error });
     window.setTimeout(() => setToast(null), 3200);
   };
+
+  useEffect(() => {
+    if (!backendConfigured) return;
+    let active = true;
+    const startingRevision = planRevisionRef.current;
+
+    const loadSavedPlan = async () => {
+      try {
+        const savedPlan = await api.getSavedWorkoutPlan();
+        if (!active) return;
+
+        if (savedPlan && planRevisionRef.current === startingRevision) {
+          const current = localStoreRef.current;
+          const next = {
+            ...current,
+            challenge: {
+              startDate: savedPlan.startDate,
+              length: savedPlan.durationDays,
+              daysPerWeek: savedPlan.daysPerWeek,
+              sessionMinutes: savedPlan.sessionMinutes,
+            },
+            plan: savedPlan.schedule,
+          };
+          writeFitnessStore(next);
+          localStoreRef.current = next;
+          setStore(next);
+          setPlanSyncStatus("saved");
+        } else {
+          setPlanDirty(true);
+          setPlanSyncStatus("saving");
+        }
+      } catch {
+        if (!active) return;
+        setPlanDirty(true);
+        setPlanSyncStatus("error");
+        setPlanSyncError("We couldn't load your account plan. We'll try to sync the plan stored on this device.");
+      } finally {
+        if (active) setPlanSyncReady(true);
+      }
+    };
+
+    void loadSavedPlan();
+    return () => {
+      active = false;
+    };
+  }, [backendConfigured]);
+
+  useEffect(() => {
+    if (!backendConfigured || !planSyncReady || !planDirty) return;
+    let active = true;
+    const snapshot = localStoreRef.current;
+    const revision = planRevisionRef.current;
+    const timer = window.setTimeout(() => {
+      setPlanSyncStatus("saving");
+      setPlanSyncError("");
+      saveQueueRef.current = saveQueueRef.current
+        .catch(() => undefined)
+        .then(() => api.saveWorkoutPlan({
+          startDate: snapshot.challenge.startDate.slice(0, 10),
+          durationDays: snapshot.challenge.length,
+          daysPerWeek: snapshot.challenge.daysPerWeek,
+          sessionMinutes: snapshot.challenge.sessionMinutes,
+          schedule: snapshot.plan,
+        }))
+        .then(() => {
+          if (active && planRevisionRef.current === revision) {
+            setPlanDirty(false);
+            setPlanSyncStatus("saved");
+          }
+        })
+        .catch((error: unknown) => {
+          if (active && planRevisionRef.current === revision) {
+            setPlanSyncStatus("error");
+            setPlanSyncError(error instanceof Error ? error.message : "The plan could not be synced.");
+          }
+        });
+    }, 350);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [backendConfigured, planSyncReady, planDirty, planSyncRetry, store.plan, store.challenge]);
+
   const challengeStart = new Date(`${store.challenge.startDate}T12:00:00`);
   const challengeDay = Math.max(1, Math.min(store.challenge.length, Math.floor((Date.now() - challengeStart.getTime()) / 86_400_000) + 1));
   
@@ -65,7 +167,27 @@ export function DashboardPage({ path, navigate, onHome, onLogout, profile }: { p
         <div className="challenge-mini"><small>{store.challenge.length}-DAY CHALLENGE</small><strong>Day {challengeDay}</strong><div><i style={{ width: `${(challengeDay / store.challenge.length) * 100}%` }} /></div><span>{Math.max(0, store.challenge.length - challengeDay)} days to go</span></div>
         <button className="sidebar-glossary" onClick={() => setProfileGlossary({ open: true })} aria-label="Open glossary"><span><Icon name="book" /></span><div><strong>Glossary</strong></div></button>
       </aside>
-      <section className="dash-main">{content}</section>
+      <section className="dash-main">
+        <div
+          className={`plan-sync-banner ${planSyncStatus}`}
+          role={planSyncStatus === "error" ? "alert" : "status"}
+          aria-live={planSyncStatus === "error" ? "assertive" : "polite"}
+        >
+          <span>
+            {planSyncStatus === "local" && "Demo mode: your plan is stored only in this browser, not in an account."}
+            {planSyncStatus === "loading" && "Loading your saved workout plan…"}
+            {planSyncStatus === "saving" && "Syncing your workout plan…"}
+            {planSyncStatus === "saved" && "Your workout plan is saved to your account."}
+            {planSyncStatus === "error" && `Plan sync issue: ${planSyncError}`}
+          </span>
+          {planSyncStatus === "error" && (
+            <button type="button" onClick={() => setPlanSyncRetry((retry) => retry + 1)}>
+              Retry sync
+            </button>
+          )}
+        </div>
+        {content}
+      </section>
       <GlossaryDrawer open={profileGlossary.open} initialTerm={profileGlossary.term} onClose={() => setProfileGlossary({ open: false })} />
       {toast && <div className={`app-toast ${toast.error ? "error" : ""}`} role="status">{toast.message}</div>}
     </main>

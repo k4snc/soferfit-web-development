@@ -13,5 +13,6 @@ staticfiles/
 
 # Environment variables / Secrets
 .env
+!.env.example
 *.sqlite3
 *.sqlite

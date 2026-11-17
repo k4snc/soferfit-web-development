@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Exercise, Workout, WorkoutExercise, Program, ProgramDay, UserChallenge, WorkoutSession, PhysicalProgress
+from .models import Exercise, Workout, WorkoutExercise, Program, ProgramDay, UserChallenge, WorkoutSession, SavedWorkoutPlan, PhysicalProgress
 
 class ExerciseSerializer(serializers.ModelSerializer):
     class Meta:
@@ -58,6 +58,53 @@ class WorkoutSessionSerializer(serializers.ModelSerializer):
         model = WorkoutSession
         fields = ['id', 'workout', 'workout_title', 'date', 'duration_minutes', 'is_completed', 'effort', 'exercises_done', 'created_at']
         read_only_fields = ['date', 'created_at']
+
+class PlannedExerciseSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=150)
+    prescription = serializers.CharField(max_length=120)
+
+class PlannedWorkoutSerializer(serializers.Serializer):
+    id = serializers.CharField(max_length=80)
+    date = serializers.DateField()
+    name = serializers.CharField(max_length=150)
+    minutes = serializers.IntegerField(min_value=1, max_value=480)
+    equipment = serializers.CharField(max_length=100)
+    target_tags = serializers.ListField(
+        child=serializers.CharField(max_length=50),
+        allow_empty=False,
+        max_length=20,
+    )
+    exercises = PlannedExerciseSerializer(many=True, allow_empty=False, max_length=50)
+    optional = serializers.BooleanField(required=False, default=False)
+    intensity = serializers.ChoiceField(
+        choices=['Easy', 'Moderate', 'Hard'],
+        required=False,
+    )
+    low_impact = serializers.BooleanField(required=False)
+    sets = serializers.IntegerField(min_value=1, max_value=20, required=False)
+
+class SavedWorkoutPlanSerializer(serializers.ModelSerializer):
+    schedule = PlannedWorkoutSerializer(many=True, max_length=300)
+
+    class Meta:
+        model = SavedWorkoutPlan
+        fields = [
+            'start_date',
+            'duration_days',
+            'days_per_week',
+            'session_minutes',
+            'schedule',
+            'updated_at',
+        ]
+        read_only_fields = ['updated_at']
+
+    def validate_schedule(self, schedule):
+        workout_ids = [workout['id'] for workout in schedule]
+        if len(workout_ids) != len(set(workout_ids)):
+            raise serializers.ValidationError(
+                'Workout IDs must be unique within a saved plan.'
+            )
+        return schedule
 
 class PhysicalProgressSerializer(serializers.ModelSerializer):
     class Meta:

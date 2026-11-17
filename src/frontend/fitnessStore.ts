@@ -107,10 +107,22 @@ const dayKey = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
-function buildPlan(startDateStr: string, lengthDays: number, daysPerWeek: number, sessionMinutes: number): PlannedWorkout[] {
+export function buildPlan(startDateStr: string, lengthDays: number, daysPerWeek: number, sessionMinutes: number): PlannedWorkout[] {
   const result: PlannedWorkout[] = [];
   const start = new Date(`${startDateStr}T12:00:00`);
   if (isNaN(start.getTime())) return result;
+
+  const frequency = Number.isFinite(daysPerWeek)
+    ? Math.min(7, Math.max(1, Math.trunc(daysPerWeek)))
+    : 4;
+  const duration = Number.isFinite(sessionMinutes)
+    ? Math.min(180, Math.max(5, Math.trunc(sessionMinutes)))
+    : 60;
+  const workoutOffsets = Array.from(
+    { length: frequency },
+    (_, index) => Math.round((index * 7) / frequency),
+  );
+  const workoutOffsetSet = new Set(workoutOffsets);
 
   const templates = [
     { name: "Full Body Strength & Conditioning", tags: ["Strength", "Core"] },
@@ -126,17 +138,17 @@ function buildPlan(startDateStr: string, lengthDays: number, daysPerWeek: number
     const date = new Date(start);
     date.setDate(start.getDate() + dayOffset);
     const dayOfWeek = date.getDay(); // 0 is Sunday, 6 is Saturday
-
-    // Assign workout days based on daysPerWeek frequency
-    const isWorkoutDay = (dayOffset % 7) < daysPerWeek && dayOfWeek !== 0;
+    const weekDayOffset = dayOffset % 7;
+    const isWorkoutDay = workoutOffsetSet.has(weekDayOffset);
 
     if (isWorkoutDay) {
-      const template = templates[dayOffset % templates.length];
+      const workoutIndex = Math.floor(dayOffset / 7) * frequency + workoutOffsets.indexOf(weekDayOffset);
+      const template = templates[workoutIndex % templates.length];
       result.push({
         id: `workout-${dayOffset + 1}`,
         date: dayKey(date),
         name: template.name,
-        minutes: sessionMinutes,
+        minutes: duration,
         equipment: "Bodyweight / Home",
         targetTags: [...template.tags],
         exercises: [
@@ -153,7 +165,7 @@ function buildPlan(startDateStr: string, lengthDays: number, daysPerWeek: number
         id: `recovery-${dayOffset + 1}`,
         date: dayKey(date),
         name: recoveryTemplate.name,
-        minutes: Math.min(30, sessionMinutes),
+        minutes: Math.min(30, duration),
         equipment: "Bodyweight / Home",
         targetTags: [...recoveryTemplate.tags],
         exercises: recoveryTemplate.exercises.map((name) => ({ name, prescription: "45 sec · easy pace" })),
@@ -169,8 +181,14 @@ function buildPlan(startDateStr: string, lengthDays: number, daysPerWeek: number
 export function createFitnessStore(profile: ProfileSeed = {}): FitnessStore {
   const startDate = profile.challengeStartDate?.slice(0, 10) || dayKey(new Date());
   const length = profile.challengeDays ?? 60;
-  const daysPerWeek = profile.workoutDays ?? 4;
-  const sessionMinutes = profile.sessionMinutes ?? 60;
+  const requestedDaysPerWeek = profile.workoutDays ?? 4;
+  const daysPerWeek = Number.isFinite(requestedDaysPerWeek)
+    ? Math.min(7, Math.max(1, Math.trunc(requestedDaysPerWeek)))
+    : 4;
+  const requestedSessionMinutes = profile.sessionMinutes ?? 60;
+  const sessionMinutes = Number.isFinite(requestedSessionMinutes)
+    ? Math.min(180, Math.max(5, Math.trunc(requestedSessionMinutes)))
+    : 60;
 
   return {
     user: {

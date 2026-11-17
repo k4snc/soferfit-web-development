@@ -1,7 +1,8 @@
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 from .serializers import EmailTokenObtainPairSerializer, UserRegistrationSerializer, UserProfileSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -10,14 +11,17 @@ from rest_framework import generics
 from .permissions import IsOwnerOrReadOnly
 from .models import FitnessProfile
 from .serializers import FitnessProfileSerializer
+from .throttles import LoginRateThrottle, RegistrationRateThrottle
 
 
 class EmailTokenObtainPairView(TokenObtainPairView):
     serializer_class = EmailTokenObtainPairSerializer
+    throttle_classes = (LoginRateThrottle,)
 
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+@throttle_classes([RegistrationRateThrottle])
 def register_view(request):
     serializer = UserRegistrationSerializer(data=request.data)
     if serializer.is_valid():
@@ -43,15 +47,19 @@ def current_user_view(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def logout_view(request):
+    refresh_token = request.data.get("refresh")
+    if not refresh_token:
+        return Response({"message": "Successfully logged out"}, status=status.HTTP_200_OK)
+
     try:
-        refresh_token = request.data.get("refresh")
-        if refresh_token:
-            token = RefreshToken(refresh_token)
-            token.blacklist()
-        return Response({"message": "Successfully logged out"}, status=status.HTTP_200_OK)
-    except Exception as e:
-        # Gracefully handle missing or optional refresh tokens sent by frontends on logout
-        return Response({"message": "Successfully logged out"}, status=status.HTTP_200_OK)
+        RefreshToken(refresh_token).blacklist()
+    except TokenError:
+        return Response(
+            {"refresh": ["Invalid or expired refresh token."]},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    return Response({"message": "Successfully logged out"}, status=status.HTTP_200_OK)
 
 
 class FitnessProfileView(generics.RetrieveUpdateAPIView):

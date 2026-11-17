@@ -1,5 +1,27 @@
 import { parseHeightCm, parseWeightKg } from "../lib/format";
+import type { PlannedWorkout } from "../fitnessStore";
 import type { UnitSystem } from "../types";
+
+export type SavedWorkoutPlan = {
+  startDate: string;
+  durationDays: 60 | 90;
+  daysPerWeek: number;
+  sessionMinutes: number;
+  schedule: PlannedWorkout[];
+};
+
+type ApiPlannedWorkout = Omit<PlannedWorkout, "targetTags" | "lowImpact"> & {
+  target_tags: string[];
+  low_impact?: boolean;
+};
+
+type ApiSavedWorkoutPlan = {
+  start_date: string;
+  duration_days: 60 | 90;
+  days_per_week: number;
+  session_minutes: number;
+  schedule: ApiPlannedWorkout[];
+};
 
 export type OnboardingProfile = {
   name: string;
@@ -123,7 +145,53 @@ function readLocalMember(): Member | null {
   }
 }
 
+function fromApiPlan(plan: ApiSavedWorkoutPlan): SavedWorkoutPlan {
+  return {
+    startDate: plan.start_date,
+    durationDays: plan.duration_days,
+    daysPerWeek: plan.days_per_week,
+    sessionMinutes: plan.session_minutes,
+    schedule: plan.schedule.map(({ target_tags, low_impact, ...workout }) => ({
+      ...workout,
+      targetTags: target_tags,
+      ...(low_impact === undefined ? {} : { lowImpact: low_impact }),
+    })),
+  };
+}
+
+function toApiPlan(plan: SavedWorkoutPlan): ApiSavedWorkoutPlan {
+  return {
+    start_date: plan.startDate,
+    duration_days: plan.durationDays,
+    days_per_week: plan.daysPerWeek,
+    session_minutes: plan.sessionMinutes,
+    schedule: plan.schedule.map(({ targetTags, lowImpact, ...workout }) => ({
+      ...workout,
+      target_tags: targetTags,
+      ...(lowImpact === undefined ? {} : { low_impact: lowImpact }),
+    })),
+  };
+}
+
 export const api = {
+  isBackendConfigured(): boolean {
+    return Boolean(API_URL);
+  },
+
+  async getSavedWorkoutPlan(): Promise<SavedWorkoutPlan | null> {
+    if (!API_URL) throw new Error("The backend is not configured.");
+    const response = await request<{ plan: ApiSavedWorkoutPlan | null }>("/workouts/plan/");
+    return response.plan ? fromApiPlan(response.plan) : null;
+  },
+
+  async saveWorkoutPlan(plan: SavedWorkoutPlan): Promise<void> {
+    if (!API_URL) throw new Error("The backend is not configured.");
+    await request<{ plan: ApiSavedWorkoutPlan }>("/workouts/plan/", {
+      method: "PUT",
+      body: JSON.stringify(toApiPlan(plan)),
+    });
+  },
+
   async register(email: string, password: string): Promise<Member> {
     if (API_URL) {
       const data = await request<{ access?: string; refresh?: string; user?: Member } | Member>("/register/", {
