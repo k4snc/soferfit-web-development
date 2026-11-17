@@ -29,6 +29,12 @@ npm run dev
 
 The base URL includes `/api`; the frontend appends endpoint paths such as `/login/` and `/me/`. Start the backend separately as described in [the backend README](src/backend/README.md).
 
+## Dashboard workout plans and demo mode
+
+The dashboard builds a deterministic 60- or 90-day workout schedule from the challenge start date, requested weekly frequency, and session duration. Training days are distributed across each seven-day block; Sunday recovery entries are optional. The schedule uses the frontend's built-in workout templates, not an AI model or a trainer-validated prescription.
+
+When the frontend is connected to Django and the member is signed in, the dashboard loads and saves one plan per account through `GET` and `PUT /api/workouts/plan/`. Plan changes are also kept in browser storage, and the dashboard reports loading, saving, saved, or sync-error status. If the backend URL is unset, the plan is browser-only demo data: it is not saved to an account or shared across browsers. Workout plan data is separate from completed workout-session and progress records.
+
 ## Muscle map
 
 The routine explorer combines an interactive muscle map with local exercise suggestions. Its main implementation is in `src/frontend/components/BodyMap.tsx` (anatomical map and focus mapping), `src/frontend/hooks/useExplorer.ts` (selection and preset state), `src/frontend/data/exercises.ts` (suggestion data), and `src/frontend/pages/LandingPage.tsx` (controls and presentation).
@@ -63,7 +69,7 @@ When at least one selected focus group belongs to each of the explorer's upper-b
 
 The anatomical regions are keyboard-operable controls. The map supports Tab focus, Enter/Space activation, arrow-key region navigation, and Home/End navigation; the visible controls expose their selected state to assistive technology. Focus-group changes are announced, and individual focus chips have descriptive removal labels. At narrow widths, filter controls can scroll horizontally and have larger touch targets.
 
-The Man/Woman model choice adds a subtle decorative hair detail only; it does not change the anatomical data. The explorer has hover and selected-region styling, but no heatmap, intensity tracking, saved workout plan, or backend persistence for its muscle-map selections. Exercise suggestions and split definitions are frontend data, not an AI-generated or trainer-validated program.
+The Man/Woman model choice adds a subtle decorative hair detail only; it does not change the anatomical data. The explorer has hover and selected-region styling, but no heatmap, intensity tracking, or backend persistence for its muscle-map selections. Dashboard workout plans are a separate feature described above. Exercise suggestions and split definitions are frontend data, not an AI-generated or trainer-validated program.
 
 The library's license and attribution are recorded in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and [licenses/BODY-MUSCLES-APACHE-2.0.txt](licenses/BODY-MUSCLES-APACHE-2.0.txt).
 
@@ -83,6 +89,8 @@ npx playwright test test/soferfit-login.spec.ts
 ```
 
 The multi-user full-stack flows in `test/soferfit-flow.spec.ts` also make real API assertions when `VITE_API_URL` is set. See [the backend README](src/backend/README.md) for backend tests and database setup.
+
+The [GitHub Actions workflow](.github/workflows/ci.yml) runs TypeScript and production-build checks, Django tests and configuration checks, migration consistency, and Playwright flows against a temporary local Django server. It runs for pushes and pull requests targeting `main`.
 
 ## Backend
 

@@ -1,4 +1,6 @@
 from django.db import models
+from django.core.validators import MaxValueValidator, MinValueValidator
+from django.core.serializers.json import DjangoJSONEncoder
 from django.contrib.auth.models import User
 
 
@@ -95,6 +97,32 @@ class WorkoutSession(models.Model):
     def __str__(self):
         workout_title = self.workout.title if self.workout else 'Workout'
         return f"{self.user.username} - {workout_title} ({self.date})"
+
+
+class SavedWorkoutPlan(models.Model):
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name='saved_workout_plan',
+    )
+    start_date = models.DateField()
+    duration_days = models.PositiveSmallIntegerField(
+        choices=[(60, '60 Days'), (90, '90 Days')],
+        default=60,
+    )
+    days_per_week = models.PositiveSmallIntegerField(
+        default=4,
+        validators=[MinValueValidator(1), MaxValueValidator(7)],
+    )
+    session_minutes = models.PositiveSmallIntegerField(
+        default=60,
+        validators=[MinValueValidator(5), MaxValueValidator(180)],
+    )
+    schedule = models.JSONField(encoder=DjangoJSONEncoder, default=list)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.username}'s saved workout plan"
 
 
 class PhysicalProgress(models.Model):

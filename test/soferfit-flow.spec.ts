@@ -244,6 +244,54 @@ test.describe("SoferFit multi-user full-stack flows", () => {
       await expect(page.getByRole("navigation", { name: "Dashboard navigation" })).toBeVisible();
       await expect(page.getByText("Day 1", { exact: true }).first()).toBeVisible();
 
+      if (apiBase) {
+        await expect(page.locator(".plan-sync-banner")).toHaveText(
+          "Your workout plan is saved to your account.",
+          { timeout: 15_000 },
+        );
+        const planToken = await page.evaluate(() => localStorage.getItem("access_token"));
+        expect(planToken).toBeTruthy();
+        const savedPlanResponse = await apiCall(
+          request,
+          planToken ?? undefined,
+          "/workouts/plan/",
+          "GET",
+          200,
+        ) as { plan: { start_date: string; duration_days: number; days_per_week: number; session_minutes: number; schedule: Array<{ id: string; date: string; optional?: boolean }> } };
+        expect(savedPlanResponse.plan).toMatchObject({
+          duration_days: profile.challengeDays,
+          days_per_week: profile.workoutDays,
+          session_minutes: Number(profile.sessionMinutes),
+        });
+        const firstWeekWorkouts = savedPlanResponse.plan.schedule.filter((workout) => {
+          if (workout.optional) return false;
+          const offset = (Date.parse(`${workout.date}T12:00:00Z`) - Date.parse(`${savedPlanResponse.plan.start_date}T12:00:00Z`)) / 86_400_000;
+          return offset >= 0 && offset < 7;
+        });
+        expect(firstWeekWorkouts).toHaveLength(profile.workoutDays);
+
+        if (profile.label === "starter-home") {
+          const savedIds = savedPlanResponse.plan.schedule.map((workout) => workout.id);
+          await page.reload();
+          await expect(page.locator(".plan-sync-banner")).toHaveText(
+            "Your workout plan is saved to your account.",
+            { timeout: 15_000 },
+          );
+          const resumedPlanResponse = await apiCall(
+            request,
+            planToken ?? undefined,
+            "/workouts/plan/",
+            "GET",
+            200,
+          ) as { plan: { schedule: Array<{ id: string }> } };
+          expect(resumedPlanResponse.plan.schedule.map((workout) => workout.id)).toEqual(savedIds);
+        }
+      } else {
+        await expect(page.locator(".plan-sync-banner")).toHaveText(
+          "Demo mode: your plan is stored only in this browser, not in an account.",
+        );
+      }
+
       const dashboardNav = page.getByRole("navigation", { name: "Dashboard navigation" });
       await dashboardNav.getByRole("button", { name: "Overview" }).click();
       await expect(page.getByRole("heading", { name: "Keep your rhythm, Athlete." })).toBeVisible();

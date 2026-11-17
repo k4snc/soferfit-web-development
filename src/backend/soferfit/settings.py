@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/6.1/ref/settings/
 from pathlib import Path
 import os
 from dotenv import load_dotenv
+from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,17 +21,91 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Load environment variables from .env file
 load_dotenv(BASE_DIR / '.env')
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/6.1/howto/deployment/checklist/
+def env_bool(name: str, default: bool = False) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-w0p3ww%%d-utl@*m7&4vls(_p-1hqyzuhwd$@z)q6e+*p&(df1'
+    value = value.strip().lower()
+    if value in {"1", "true", "yes", "on"}:
+        return True
+    if value in {"0", "false", "no", "off"}:
+        return False
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+    raise ImproperlyConfigured(f"{name} must be a boolean value")
 
-ALLOWED_HOSTS = []
 
+def env_list(name: str) -> list[str]:
+    return [
+        item.strip()
+        for item in os.getenv(name, "").split(",")
+        if item.strip()
+    ]
+
+
+ENVIRONMENT = os.getenv("DJANGO_ENV", "development").strip().lower()
+if ENVIRONMENT not in {"development", "test", "production"}:
+    raise ImproperlyConfigured(
+        "DJANGO_ENV must be development, test, or production"
+    )
+
+IS_PRODUCTION = ENVIRONMENT == "production"
+DEBUG = env_bool("DJANGO_DEBUG", default=ENVIRONMENT == "development")
+if IS_PRODUCTION and DEBUG:
+    raise ImproperlyConfigured("DJANGO_DEBUG must be false in production")
+
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "").strip()
+if not SECRET_KEY:
+    raise ImproperlyConfigured("DJANGO_SECRET_KEY must be set")
+if IS_PRODUCTION and len(SECRET_KEY) < 50:
+    raise ImproperlyConfigured(
+        "DJANGO_SECRET_KEY must be at least 50 characters in production"
+    )
+
+ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS")
+if not ALLOWED_HOSTS and not IS_PRODUCTION:
+    ALLOWED_HOSTS = ["localhost", "127.0.0.1", "[::1]"]
+if IS_PRODUCTION and (
+    not ALLOWED_HOSTS or "*" in ALLOWED_HOSTS
+):
+    raise ImproperlyConfigured(
+        "Set DJANGO_ALLOWED_HOSTS to explicit hostnames in production"
+    )
+
+CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS")
+CORS_ALLOW_ALL_ORIGINS = env_bool("CORS_ALLOW_ALL_ORIGINS")
+if IS_PRODUCTION and (not CORS_ALLOWED_ORIGINS or CORS_ALLOW_ALL_ORIGINS):
+    raise ImproperlyConfigured(
+        "Set CORS_ALLOWED_ORIGINS and disable CORS_ALLOW_ALL_ORIGINS in production"
+    )
+if IS_PRODUCTION and any(
+    not origin.startswith("https://") for origin in CORS_ALLOWED_ORIGINS
+):
+    raise ImproperlyConfigured(
+        "Production CORS_ALLOWED_ORIGINS entries must use HTTPS"
+    )
+
+SESSION_COOKIE_SECURE = IS_PRODUCTION
+CSRF_COOKIE_SECURE = IS_PRODUCTION
+SECURE_SSL_REDIRECT = env_bool(
+    "DJANGO_SECURE_SSL_REDIRECT",
+    default=IS_PRODUCTION,
+)
+try:
+    SECURE_HSTS_SECONDS = int(
+        os.getenv("DJANGO_HSTS_SECONDS", "31536000" if IS_PRODUCTION else "0")
+    )
+except ValueError as error:
+    raise ImproperlyConfigured("DJANGO_HSTS_SECONDS must be an integer") from error
+if SECURE_HSTS_SECONDS < 0:
+    raise ImproperlyConfigured("DJANGO_HSTS_SECONDS cannot be negative")
+SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool(
+    "DJANGO_HSTS_INCLUDE_SUBDOMAINS"
+)
+SECURE_HSTS_PRELOAD = env_bool("DJANGO_HSTS_PRELOAD")
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
+X_FRAME_OPTIONS = "DENY"
 
 # Application definition
 
@@ -88,6 +163,10 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    'DEFAULT_THROTTLE_RATES': {
+        'login': '20/minute',
+        'register': '20/hour',
+    },
 }
 
 # Database
@@ -151,13 +230,39 @@ STATIC_URL = 'static/'
 
 
 # Email
-# https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
+if IS_PRODUCTION:
+    email_host = os.getenv("EMAIL_HOST", "").strip()
+    if not email_host:
+        raise ImproperlyConfigured("EMAIL_HOST must be set in production")
+    try:
+        email_port = int(os.getenv("EMAIL_PORT", "587"))
+    except ValueError as error:
+        raise ImproperlyConfigured("EMAIL_PORT must be an integer") from error
+    email_use_tls = env_bool("EMAIL_USE_TLS", default=True)
+    email_use_ssl = env_bool("EMAIL_USE_SSL")
+    if email_use_tls and email_use_ssl:
+        raise ImproperlyConfigured("EMAIL_USE_TLS and EMAIL_USE_SSL cannot both be true")
 
-MAILERS = {
-    'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
-    },
-}
-
-
-CORS_ALLOW_ALL_ORIGINS = True
+    DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "").strip()
+    if not DEFAULT_FROM_EMAIL:
+        raise ImproperlyConfigured("DEFAULT_FROM_EMAIL must be set in production")
+    MAILERS = {
+        "default": {
+            "BACKEND": "django.core.mail.backends.smtp.EmailBackend",
+            "OPTIONS": {
+                "host": email_host,
+                "port": email_port,
+                "username": os.getenv("EMAIL_HOST_USER", ""),
+                "password": os.getenv("EMAIL_HOST_PASSWORD", ""),
+                "use_tls": email_use_tls,
+                "use_ssl": email_use_ssl,
+                "timeout": 10,
+            },
+        },
+    }
+else:
+    MAILERS = {
+        "default": {
+            "BACKEND": "django.core.mail.backends.console.EmailBackend",
+        },
+    }
