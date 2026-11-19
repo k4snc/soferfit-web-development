@@ -105,3 +105,9 @@ The workflow runs Django tests against PostgreSQL. SQLite remains the default fo
 ## Backend
 
 The Django project, API, migrations, and backend-specific setup are in [`src/backend`](src/backend/). See its [README](src/backend/README.md) for local setup, environment configuration, migrations, routes, and tests.
+
+## Project documentation
+
+- [Architecture overview](docs/ARCHITECTURE.md) — components, request flow, data boundaries, and CI responsibilities
+- [Development runbook](docs/DEVELOPMENT_RUNBOOK.md) — Docker startup, migrations, health checks, testing, troubleshooting, and production safety reminders
+- [Product requirements](PRODUCT_REQUIREMENTS.md) — current product scope and constraints
