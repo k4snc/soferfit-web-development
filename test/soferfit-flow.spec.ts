@@ -117,6 +117,78 @@ async function completeSignup(page: Page, profile: UserProfile, email: string, p
   return dialog;
 }
 
+test("signup can retry onboarding after account creation succeeds", async ({ page }) => {
+  test.skip(!apiBase, "VITE_API_URL is required for API signup");
+
+  const email = `retry-setup-${randomUUID()}@example.test`;
+  let registrationCalls = 0;
+  let onboardingCalls = 0;
+  let browserAlert: string | null = null;
+  page.on("dialog", async (dialog) => {
+    browserAlert = dialog.message();
+    await dialog.dismiss();
+  });
+  await page.route("**/api/register/", async (route) => {
+    registrationCalls += 1;
+    await route.fulfill({
+      status: 201,
+      contentType: "application/json",
+      json: {
+        access: "signup-test-access",
+        refresh: "signup-test-refresh",
+        user: { id: 1, email, createdAt: new Date().toISOString() },
+      },
+    });
+  });
+  await page.route("**/api/me/onboarding/", async (route) => {
+    onboardingCalls += 1;
+    if (onboardingCalls === 1) {
+      await route.fulfill({
+        status: 503,
+        contentType: "text/html",
+        body: "<html><body>Temporary server failure</body></html>",
+      });
+      return;
+    }
+    await route.fulfill({ status: 200, contentType: "application/json", json: {} });
+  });
+
+  await page.goto("/");
+  await page.locator("nav.nav").getByRole("button", { name: "Sign up", exact: true }).click();
+  const dialog = page.locator(".signup-modal[role='dialog']");
+  await dialog.getByPlaceholder("Choose a username").fill("Retry Setup");
+  await dialog.getByPlaceholder("you@example.com").fill(email);
+  await dialog.getByPlaceholder("Create a strong password").fill("SecurePass123!");
+  await dialog.getByPlaceholder("24").fill("28");
+  await dialog.getByPlaceholder("175 cm").fill("172");
+  await dialog.getByPlaceholder("68 kg").fill("70");
+  await dialog.getByRole("button", { name: "Next", exact: true }).click();
+
+  await clickChoice(dialog, "Mesomorph");
+  await dialog.getByRole("button", { name: "Body Recomposition", exact: true }).click();
+  await dialog.getByRole("button", { name: "Starting Out", exact: true }).click();
+  await dialog.getByRole("button", { name: "Moderately Active", exact: true }).click();
+  await dialog.getByRole("button", { name: "Full Gym Access", exact: true }).click();
+  await dialog.getByLabel("Target Timeline Focus").selectOption("Whole challenge");
+  await dialog.getByRole("button", { name: "Next", exact: true }).click();
+
+  await dialog.getByRole("button", { name: "60-Day Challenge" }).click();
+  await dialog.getByRole("button", { name: "3 days", exact: true }).click();
+  await dialog.getByLabel("Session duration").selectOption("30");
+  await dialog.getByRole("button", { name: "Next", exact: true }).click();
+  await dialog.getByRole("button", { name: "Generate My Plan", exact: true }).click();
+
+  await expect(dialog.getByRole("alert")).toContainText(
+    "The server encountered a problem. Please try again later.",
+  );
+  await dialog.getByRole("button", { name: "Retry plan setup", exact: true }).click();
+  await expect(dialog.getByRole("heading", { name: "Your challenge is ready." })).toBeVisible({ timeout: 20_000 });
+
+  expect(registrationCalls).toBe(1);
+  expect(onboardingCalls).toBe(2);
+  expect(browserAlert).toBeNull();
+});
+
 test.describe("SoferFit multi-user full-stack flows", () => {
   test.describe.configure({ mode: "parallel" });
 

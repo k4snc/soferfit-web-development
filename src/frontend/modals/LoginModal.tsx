@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "../components/Button";
 import { Icon } from "../components/Icon";
-import { api } from "../services/api";
+import { ApiError, api } from "../services/api";
 
 export function LoginModal({
   open,
@@ -47,7 +47,13 @@ export function LoginModal({
       onSuccess();
     } catch (err) {
       console.error("Login failed:", err);
-      setErrors({ general: "Invalid email or password. Please check your credentials." });
+      setErrors({
+        general: err instanceof ApiError && err.status === 401
+          ? "Invalid email or password. Please check your credentials."
+          : err instanceof Error
+            ? err.message
+            : "We couldn't log you in. Please try again.",
+      });
     } finally {
       setLoading(false);
     }
@@ -58,7 +64,7 @@ export function LoginModal({
       <div className="modal login-modal" role="dialog" aria-modal="true" aria-label="Log in" onMouseDown={(event) => event.stopPropagation()}>
         <button className="modal-close" onClick={onClose} aria-label="Close login">×</button>
         <h2>Welcome back</h2>
-        {errors.general && <small className="field-error" style={{ display: "block", marginBottom: "1rem" }}>{errors.general}</small>}
+        {errors.general && <small className="field-error" role="alert" style={{ display: "block", marginBottom: "1rem" }}>{errors.general}</small>}
         <label className={errors.email ? "field-invalid" : ""}>
           Email
           <input

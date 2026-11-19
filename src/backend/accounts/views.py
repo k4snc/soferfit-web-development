@@ -4,6 +4,12 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.token_blacklist.models import (
+    BlacklistedToken,
+    OutstandingToken,
+)
+from django.db import DatabaseError, connection, transaction
+import logging
 from .serializers import EmailTokenObtainPairSerializer, UserRegistrationSerializer, UserProfileSerializer
 from rest_framework_simplejwt.views import TokenObtainPairView
 
@@ -12,6 +18,8 @@ from .permissions import IsOwnerOrReadOnly
 from .models import FitnessProfile
 from .serializers import FitnessProfileSerializer
 from .throttles import LoginRateThrottle, RegistrationRateThrottle
+
+logger = logging.getLogger(__name__)
 
 
 class EmailTokenObtainPairView(TokenObtainPairView):
@@ -37,11 +45,37 @@ def register_view(request):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-@api_view(['GET'])
+@api_view(['GET', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def current_user_view(request):
+    if request.method == "DELETE":
+        with transaction.atomic():
+            outstanding_tokens = OutstandingToken.objects.filter(user=request.user)
+            for token in outstanding_tokens:
+                BlacklistedToken.objects.get_or_create(token=token)
+                token.user = None
+                token.token = ""
+                token.save(update_fields=["user", "token"])
+            request.user.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
     serializer = UserProfileSerializer(request.user)
     return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def health_check_view(request):
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+    except DatabaseError:
+        logger.exception("SoferFit readiness check could not reach the database")
+        return Response(
+            {"status": "unavailable"},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+    return Response({"status": "ok"}, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])

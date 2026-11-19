@@ -1,0 +1,11 @@
+.env
+.env.*
+src/backend/.env
+src/backend/.env.*
+__pycache__/
+*.py[cod]
+*.sqlite3
+node_modules/
+dist/
+.git/
+.gitignore

@@ -28,6 +28,9 @@ export function SignupModal({
   const [showLeavePrompt, setShowLeavePrompt] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [avatarError, setAvatarError] = useState("");
+  const [signupError, setSignupError] = useState("");
+  const [signupSubmitting, setSignupSubmitting] = useState(false);
+  const [accountRegistered, setAccountRegistered] = useState(false);
   const [returnToReview, setReturnToReview] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
   const [generationStatus, setGenerationStatus] = useState(0);
@@ -71,6 +74,9 @@ export function SignupModal({
     setDirection("forward");
     setShowLeavePrompt(false);
     setAvatarError("");
+    setSignupError("");
+    setSignupSubmitting(false);
+    setAccountRegistered(false);
     setReturnToReview(false);
     setGenerationProgress(0);
     setGenerationStatus(0);
@@ -245,7 +251,7 @@ export function SignupModal({
             {step === 2 && (
               <div className={`signup-step-content signup-slide-${direction}`} key="step-2">
                 <h2 id="signup-step-title" ref={titleRef} tabIndex={-1}>Tell us about your starting point.</h2>
-                <p className="signup-step-intro">These details help us customize practical volume, exercise selection, and recovery.</p>
+                <p className="signup-step-intro">Your weekly frequency and session length shape the schedule. Routines use prewritten templates, not medical or trainer-reviewed prescriptions.</p>
                 <div className="signup-step-section">
                   <div className="signup-label-with-tip"><span>SOMATOTYPE</span><InfoTip term="Somatotype" definition={glossaryTerms.find(([term]) => term === "Somatotype")?.[1] ?? ""} onLearnMore={() => onOpenGlossary("Somatotype")} actionLabel="Open Glossary" showTerm={false} /></div>
                   <div className="signup-somatotype-grid">
@@ -277,7 +283,7 @@ export function SignupModal({
                 <div className="signup-medical-block">
                   <p>SoferFit offers general fitness guidance, not medical advice. If you have an injury or health condition, check with a doctor first.</p>
                   <label><input type="checkbox" checked={answers.hasCondition} onChange={(event) => setAnswer("hasCondition", event.target.checked)} /><span>I have an injury or health condition</span></label>
-                  {answers.hasCondition && <small>We’ll favor lower-impact exercises in your plan.</small>}
+                  {answers.hasCondition && <small>This only turns on a low-impact preference by default; it does not assess or adapt every exercise.</small>}
                 </div>
               </div>
             )}
@@ -416,13 +422,18 @@ export function SignupModal({
             <footer className="signup-actions signup-review-actions">
               <button className="signup-back-link" type="button" onClick={goBack}>Back</button>
               <div>
-                <Button 
+                <Button
+                  disabled={signupSubmitting}
                   onClick={async () => {
+                    if (signupSubmitting) return;
+                    setSignupSubmitting(true);
+                    setSignupError("");
                     try {
-                      // 1. Register user account on Django backend
-                      await api.register(answers.email, answers.password);
+                      if (!accountRegistered) {
+                        await api.register(answers.email, answers.password);
+                        setAccountRegistered(true);
+                      }
 
-                      // 2. Save onboarding profile data to Django backend
                       await api.saveOnboarding({
                         name: answers.name,
                         age: answers.age,
@@ -450,13 +461,20 @@ export function SignupModal({
                       setStep(5);
                     } catch (error) {
                       console.error("Backend integration failed during signup:", error);
-                      alert("Could not connect to the backend server. Make sure Django is running.");
+                      setSignupError(
+                      error instanceof Error
+                        ? error.message
+                        : "We couldn't finish setting up your account. Please try again.",
+                      );
+                    } finally {
+                      setSignupSubmitting(false);
                     }
                   }}
                 >
-                  Generate My Plan
+                  {signupSubmitting ? "Creating your account..." : accountRegistered ? "Retry plan setup" : "Generate My Plan"}
                 </Button>
-                <small>AI generation is limited. This uses one of your plan generations.</small>
+                {signupError && <small className="signup-field-error" role="alert"><span>!</span>{signupError}</small>}
+                <small>Building a template routine uses one of your three weekly builds.</small>
               </div>
             </footer>
           )}

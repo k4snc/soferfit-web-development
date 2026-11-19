@@ -16,7 +16,7 @@ import { api } from "../services/api";
 import { SessionPlayer } from "../session/SessionPlayer";
 import type { SignupAnswers } from "../types";
 
-export function DashboardPage({ path, navigate, onHome, onLogout, profile }: { path?: string; navigate: (path: string) => void; onHome: () => void; onLogout: () => void; profile: SignupAnswers | null }) {
+export function DashboardPage({ path, navigate, onHome, onLogout, onAccountDeleted, profile }: { path?: string; navigate: (path: string) => void; onHome: () => void; onLogout: () => void; onAccountDeleted: (browserDataCleared: boolean) => void; profile: SignupAnswers | null }) {
   const activePath = typeof path === "string" && path.length > 0 ? path : window.location.pathname || "/dashboard";
   const backendConfigured = api.isBackendConfigured();
   const [store, setStore] = useState(() => readFitnessStore(profile));
@@ -36,7 +36,10 @@ export function DashboardPage({ path, navigate, onHome, onLogout, profile }: { p
     try {
       const planChanged = next.plan !== localStoreRef.current.plan
         || next.challenge !== localStoreRef.current.challenge;
-      writeFitnessStore(next);
+      if (!writeFitnessStore(next)) {
+        setToast({ message: "We couldn't save that change in this browser. Check available storage and try again.", error: true });
+        return false;
+      }
       localStoreRef.current = next;
       setStore(next);
       if (planChanged) {
@@ -76,7 +79,11 @@ export function DashboardPage({ path, navigate, onHome, onLogout, profile }: { p
             },
             plan: savedPlan.schedule,
           };
-          writeFitnessStore(next);
+          if (!writeFitnessStore(next)) {
+            setPlanSyncStatus("error");
+            setPlanSyncError("The account plan loaded, but this browser could not store its local copy.");
+            return;
+          }
           localStoreRef.current = next;
           setStore(next);
           setPlanSyncStatus("saved");
@@ -150,14 +157,39 @@ export function DashboardPage({ path, navigate, onHome, onLogout, profile }: { p
     onLogout();
   };
 
+  const deleteAccount = async () => {
+    const accountDataCleared = await api.deleteAccount();
+    const browserDataCleared = clearFitnessStore();
+    onAccountDeleted(accountDataCleared && browserDataCleared);
+  };
+
   if (activePath.startsWith("/session/")) {
-    const workout = store.plan.find((item) => item.id === decodeURIComponent(activePath.split("/").pop() || ""));
+    const sessionMatch = /^\/session\/([^/]+)$/.exec(activePath);
+    let sessionId: string | null = null;
+    if (sessionMatch) {
+      try {
+        sessionId = decodeURIComponent(sessionMatch[1]);
+      } catch (error) {
+        if (!(error instanceof URIError)) throw error;
+      }
+    }
+    const workout = sessionId
+      ? store.plan.find((item) => item.id === sessionId)
+      : undefined;
     return workout ? <><SessionPlayer workout={workout} store={store} update={update} navigate={navigate} toast={showToast} />{toast && <div className={`app-toast ${toast.error ? "error" : ""}`}>{toast.message}</div>}</> : <main className="session-player"><EmptyState title="Workout not found" copy="Return to your plan and choose another workout." /><Button onClick={() => navigate("/workouts")}>Back to workouts</Button></main>;
+  }
+  if (activePath !== "/dashboard" && !memberNav.some((item) => item.path === activePath)) {
+    return (
+      <main className="session-player">
+        <EmptyState title="Page not found" copy="That page doesn't exist or may have moved." />
+        <Button onClick={() => navigate("/dashboard")}>Go to dashboard</Button>
+      </main>
+    );
   }
   const content = activePath === "/workouts" ? <WorkoutsPage store={store} update={update} navigate={navigate} toast={showToast} />
     : activePath === "/progress" ? <ProgressPage store={store} update={update} toast={showToast} />
       : activePath === "/generate" ? <GeneratePage store={store} update={update} navigate={navigate} toast={showToast} />
-        : activePath === "/profile" ? <ProfilePage store={store} update={update} toast={showToast} onLogout={logout} onOpenGlossary={(term) => setProfileGlossary({ open: true, term })} />
+        : activePath === "/profile" ? <ProfilePage store={store} update={update} toast={showToast} onLogout={logout} onDeleteAccount={deleteAccount} onOpenGlossary={(term) => setProfileGlossary({ open: true, term })} />
           : <OverviewPage store={store} navigate={navigate} />;
   return (
     <main className="dashboard-page">
