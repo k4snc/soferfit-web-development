@@ -112,7 +112,7 @@ export function GeneratePage({ store, update, navigate, toast }: { store: Fitnes
     setResult(null);
     setGeneratorState("form");
   };
-  const loadingCopy = ["Analyzing your profile...", "Balancing reps, rest, and equipment...", "Building your routine..."];
+  const loadingCopy = ["Checking your selections...", "Applying template options...", "Building your routine..."];
 
   return <><PageHeader title="Generate" />
     <div className="generate-header"><span>{remaining} of 3 generations left this week</span></div>
@@ -139,13 +139,13 @@ export function GeneratePage({ store, update, navigate, toast }: { store: Fitnes
         <header><div><small>YOUR GENERATED ROUTINE</small><h2>{result.name}</h2><p>{result.minutes} min · {result.equipment}</p></div><div className="target-chips">{result.targetTags.map((tag) => <i key={tag}>{tag}</i>)}</div></header>
         <div className="generated-exercises">{result.exercises.map((exercise, index) => <article key={`${exercise.name}-${index}`}><span className="dumbbell-icon"><Icon name="dumbbell" /></span><div><strong>{exercise.name}</strong><small>{exercise.prescription}</small></div><i>{result.targetTags[index % result.targetTags.length]}</i></article>)}</div>
         <div className="why-plan"><span><Icon name="spark" /></span><div><strong>Why this plan</strong><ul><li>{equipment === "Bodyweight / Home" ? "Bodyweight-focused, since that's your selected equipment." : `${equipment} movements match the setup you selected.`}</li><li>{lowImpact ? "Low-impact swaps are included so you can adjust as needed." : `${effort} effort keeps today's session aligned with how you feel.`}</li></ul></div></div>
-        <p className="generator-guidance">AI suggestions are general fitness guidance, not medical advice.</p>
+        <p className="generator-guidance">This rule-based template is general fitness guidance, not medical advice or a trainer-validated plan.</p>
       </div>}
 
       {generatorState === "error" && <div className="generator-message"><span><Icon name="spark" /></span><h2>Let's try that again.</h2><p>We couldn't generate a new plan. Your current plan is unchanged and no generation was used.</p><Button onClick={() => setGeneratorState("form")}>Try again</Button></div>}
 
       <footer className="generator-actions">
-        {generatorState === "form" && <><Button onClick={startGeneration} disabled={!valid || !remaining}>Generate routine</Button><small>AI generation is limited, use wisely.</small>{!remaining && <p className="limit-message">You've used all 3 generations this week. They reset on {prettyDate(resetDate)}. In the meantime, swap exercises in <button onClick={() => navigate("/workouts")}>My workouts</button>.</p>}</>}
+        {generatorState === "form" && <><Button onClick={startGeneration} disabled={!valid || !remaining}>Build routine</Button><small>Template routine builds are limited to 3 per week.</small>{!remaining && <p className="limit-message">You've used all 3 builds this week. They reset on {prettyDate(resetDate)}. In the meantime, swap exercises in <button onClick={() => navigate("/workouts")}>My workouts</button>.</p>}</>}
         {generatorState === "result" && result && <><div className="schedule-action"><label>Add to my plan<input type="date" min={dateKey(new Date())} value={scheduleDate} onChange={(event) => setScheduleDate(event.target.value)} /></label><Button onClick={() => addToPlan(false)}>Add to my plan</Button></div><div className="result-actions"><Button variant="ghost" onClick={() => addToPlan(true)}>Save to My workouts</Button><Button variant="ghost" onClick={() => setConfirmRegenerate(true)} disabled={!remaining}>Regenerate</Button><button onClick={discard}>Discard</button></div>{confirmRegenerate && <div className="regenerate-confirm"><p>Regenerating uses another of your weekly generations.</p><button onClick={() => setConfirmRegenerate(false)}>Cancel</button><Button onClick={startGeneration}>Use 1 generation</Button></div>}</>}
       </footer>
     </article>

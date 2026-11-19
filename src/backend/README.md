@@ -28,14 +28,14 @@ The repository may also have an existing `venv` directory, but it is local and i
 
 ## Database and environment
 
-By default, the backend uses SQLite at `src/backend/db.sqlite3`. Django loads an optional `.env` file from this directory. Setting `DB_NAME` switches the configured database engine to PostgreSQL:
+By default, the backend uses SQLite at `src/backend/db.sqlite3` for local development and tests. Django loads an optional `.env` file from this directory. Setting `DB_NAME` switches the configured database engine to PostgreSQL. Production mode requires PostgreSQL settings and never falls back to SQLite:
 
 | Variable | Purpose | Default |
 | --- | --- | --- |
-| `DB_NAME` | PostgreSQL database name; when set, enables PostgreSQL configuration | Unset (SQLite) |
-| `DB_USER` | PostgreSQL user | No default in settings |
-| `DB_PASSWORD` | PostgreSQL password | No default in settings |
-| `DB_HOST` | PostgreSQL host | `localhost` |
+| `DB_NAME` | PostgreSQL database name; when set, enables PostgreSQL configuration | Unset (SQLite outside production) |
+| `DB_USER` | PostgreSQL user | Required in production |
+| `DB_PASSWORD` | PostgreSQL password | Required in production |
+| `DB_HOST` | PostgreSQL host | `localhost` outside production; required in production |
 | `DB_PORT` | PostgreSQL port | `5432` |
 
 For example, create a local `src/backend/.env` (do not commit it) with PostgreSQL connection values:
@@ -48,7 +48,7 @@ DB_HOST=localhost
 DB_PORT=5432
 ```
 
-PostgreSQL must be installed and running when `DB_NAME` is set. Otherwise, omit these variables and use SQLite.
+PostgreSQL must be installed and running when `DB_NAME` is set. In production, set all four connection values (`DB_NAME`, `DB_USER`, `DB_PASSWORD`, and `DB_HOST`); missing values stop startup instead of selecting SQLite. Migration `accounts.0004_normalize_user_emails` normalizes existing email addresses and creates a database-enforced case-insensitive unique index. It deliberately stops with the conflicting user IDs if existing addresses would collide; resolve those records before retrying the migration.
 
 ### Security configuration
 
@@ -70,7 +70,7 @@ For production, set these values in the hosting provider's secret/configuration 
 | `EMAIL_USE_TLS`, `EMAIL_USE_SSL` | Use the transport mode required by the provider; never enable both |
 | `DEFAULT_FROM_EMAIL` | Verified sender address for production email |
 
-If TLS terminates at a reverse proxy, configure Django's trusted-proxy HTTPS detection only for the actual trusted proxy; otherwise HTTPS redirects can loop or trust spoofed headers. CORS should list only the deployed frontend origins. The login and registration endpoints have per-IP DRF throttles; DRF's default in-memory cache is process-local, so production deployments with multiple workers or instances should use a shared cache and edge-level abuse protection.
+If TLS terminates at a reverse proxy, configure Django's trusted-proxy HTTPS detection only for the actual trusted proxy; otherwise HTTPS redirects can loop or trust spoofed headers. CORS should list only the deployed frontend origins. The login and registration endpoints have per-IP DRF throttles; DRF's default in-memory cache is process-local. A production deployment with multiple workers or instances still needs a shared cache and edge-level abuse protection. Those provider-specific services are not configured for this internal demo.
 
 `python manage.py check --deploy` may report `security.W005` and `security.W021`: HSTS is enabled for the API host, but subdomain coverage and browser preload are intentionally off by default. Enable them only after confirming every affected subdomain permanently supports HTTPS and your organization is ready for browser preload.
 
@@ -112,6 +112,8 @@ All API routes are under `/api/`. Protected endpoints use JWT bearer authenticat
 | `POST` | `/api/token/refresh/` | Public | Refresh an access token |
 | `POST` | `/api/logout/` | Authenticated | Blacklist a supplied refresh token |
 | `GET` | `/api/me/` | Authenticated | Get the current user |
+| `DELETE` | `/api/me/` | Authenticated | Delete the account and cascading user-owned records, revoke refresh tokens, and remove sensitive token strings |
+| `GET` | `/api/health/` | Public | Check database readiness; returns `503` without exposing connection details when the database is unavailable |
 | `GET`, `PUT`, `PATCH` | `/api/assessment/` | Authenticated | Retrieve or update the current user's fitness profile |
 | `GET`, `PUT`, `PATCH` | `/api/me/onboarding/` | Authenticated | Retrieve or update that same fitness profile for onboarding |
 
@@ -165,17 +167,20 @@ The browser calls the configured base plus API paths. For example, login calls `
 From this directory:
 
 ```powershell
+$env:PYTHON_DOTENV_DISABLED = "true"
+$env:DJANGO_ENV = "test"
+$env:DJANGO_SECRET_KEY = "local-test-secret-for-this-run"
 python manage.py check
 python manage.py test
 ```
 
-The backend tests cover authentication throttling, logout token handling, workout-session ownership, and saved-plan authentication, validation, and per-user access. The frontend Playwright suite includes browser tests and optional full-stack flows. To run those with the backend, keep Django running in one terminal and, from the repository root in another terminal, configure the API URL and run the test:
+The backend tests cover authentication throttling, password validation, case-insensitive email uniqueness, account deletion, database health checks, workout-session ownership, and saved-plan access. GitHub Actions runs them against PostgreSQL. The frontend Playwright suite includes browser tests and optional full-stack flows. To run those with the backend, keep Django running in one terminal and, from the repository root in another terminal, configure the API URL and run the test:
 
 ```powershell
 $env:VITE_API_URL = "http://127.0.0.1:8000/api"
 npx playwright test
 ```
 
-Playwright starts Vite, not Django; the backend must already be running. The tests in `test/soferfit-flow.spec.ts` perform API assertions—including saving and resuming a workout plan—when `VITE_API_URL` is set. Without that variable, they verify browser-only demo mode instead. The workflow at `.github/workflows/ci.yml` starts Django with its runner-local SQLite database before running Playwright against the API.
+Playwright starts Vite, not Django; the backend must already be running. The tests in `test/soferfit-flow.spec.ts` perform API assertions—including saving and resuming a workout plan—when `VITE_API_URL` is set. Without that variable, they verify browser-only demo mode instead. The workflow at `.github/workflows/ci.yml` starts Django against its PostgreSQL service before running Playwright against the API.
 
 See the repository-root README for frontend checks and the login regression test.

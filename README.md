@@ -7,7 +7,7 @@ SoferFit is a React and TypeScript fitness-planning web app with a Django REST A
 - Node.js and npm
 - Python 3.13 (the version used to validate this checkout)
 - A browser supported by Playwright/Chromium to run browser tests
-- Optional PostgreSQL server for backend development; SQLite is used by default
+- Optional PostgreSQL server for backend development; SQLite is for local development and tests only
 
 ## Run the frontend
 
@@ -34,6 +34,14 @@ The base URL includes `/api`; the frontend appends endpoint paths such as `/logi
 The dashboard builds a deterministic 60- or 90-day workout schedule from the challenge start date, requested weekly frequency, and session duration. Training days are distributed across each seven-day block; Sunday recovery entries are optional. The schedule uses the frontend's built-in workout templates, not an AI model or a trainer-validated prescription.
 
 When the frontend is connected to Django and the member is signed in, the dashboard loads and saves one plan per account through `GET` and `PUT /api/workouts/plan/`. Plan changes are also kept in browser storage, and the dashboard reports loading, saving, saved, or sync-error status. If the backend URL is unset, the plan is browser-only demo data: it is not saved to an account or shared across browsers. Workout plan data is separate from completed workout-session and progress records.
+
+## Internal demo data and safety
+
+SoferFit is currently an internal demo, not a production service. Use synthetic accounts and do not enter real health, injury, body-measurement, or progress-photo data. The footer's **Demo privacy & data** disclosure describes what the current browser and API store. Progress photos remain in browser storage, and backend authentication tokens are currently stored in `localStorage`; neither is an approved design for sensitive production data. Before real users in the Philippines, have a responsible privacy adviser assess applicable Data Privacy Act and NPC requirements; this project is not a compliance certification.
+
+The workout builder uses deterministic, prewritten templates in the browser. It does not use an AI model, medically assess injuries, or provide trainer-validated prescriptions. The injury/health-condition option only turns on a low-impact preference by default in the workout builder; it does not adapt every generated or scheduled exercise.
+
+The profile page provides account deletion. With the backend configured, `DELETE /api/me/` deletes the account and related records and revokes refresh tokens. It also clears the dashboard data and authentication values from the current browser. It cannot clear data in another browser or define retention in backups; backup/retention operations are not configured. The dashboard export only includes data currently available in that browser, not all server-side records.
 
 ## Muscle map
 
@@ -92,6 +100,14 @@ The multi-user full-stack flows in `test/soferfit-flow.spec.ts` also make real A
 
 The [GitHub Actions workflow](.github/workflows/ci.yml) runs TypeScript and production-build checks, Django tests and configuration checks, migration consistency, and Playwright flows against a temporary local Django server. It runs for pushes and pull requests targeting `main`.
 
+The workflow runs Django tests against PostgreSQL. SQLite remains the default for local development/test runs when `DB_NAME` is unset. `DJANGO_ENV=production` requires explicit PostgreSQL connection settings and will not silently fall back to SQLite.
+
 ## Backend
 
 The Django project, API, migrations, and backend-specific setup are in [`src/backend`](src/backend/). See its [README](src/backend/README.md) for local setup, environment configuration, migrations, routes, and tests.
+
+## Project documentation
+
+- [Architecture overview](docs/ARCHITECTURE.md) — components, request flow, data boundaries, and CI responsibilities
+- [Development runbook](docs/DEVELOPMENT_RUNBOOK.md) — Docker startup, migrations, health checks, testing, troubleshooting, and production safety reminders
+- [Product requirements](PRODUCT_REQUIREMENTS.md) — current product scope and constraints

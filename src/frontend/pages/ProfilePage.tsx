@@ -13,12 +13,14 @@ export function ProfilePage({
   update,
   toast,
   onLogout,
+  onDeleteAccount,
   onOpenGlossary,
 }: {
   store: FitnessStore;
   update: (next: FitnessStore) => boolean;
   toast: (message: string, error?: boolean) => void;
   onLogout: () => void;
+  onDeleteAccount: () => Promise<void>;
   onOpenGlossary: (term?: string) => void;
 }) {
   const sectionNames = ["Account", "Body profile", "Training", "Health & safety", "Notifications", "Privacy & data", "Help"] as const;
@@ -35,6 +37,8 @@ export function ProfilePage({
   const [showRestart, setShowRestart] = useState(false);
   const [deleteText, setDeleteText] = useState("");
   const [showDelete, setShowDelete] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
   const [durationChoice, setDurationChoice] = useState([15, 30, 45, 60].includes(challenge.sessionMinutes) ? String(challenge.sessionMinutes) : "custom");
@@ -243,7 +247,22 @@ export function ProfilePage({
     link.download = "soferfit-data.json";
     link.click();
     URL.revokeObjectURL(url);
-    toast("Your data export is ready.");
+    toast("Your local dashboard data export is ready.");
+  };
+
+  const deleteAccount = async () => {
+    setDeleteError("");
+    setIsDeleting(true);
+    try {
+      await onDeleteAccount();
+    } catch (error) {
+      setDeleteError(
+        error instanceof Error
+          ? error.message
+          : "We couldn't delete your account. Please try again.",
+      );
+      setIsDeleting(false);
+    }
   };
 
   const cardClass = (section: SectionName) => `profile-section-card ${expanded === section ? "mobile-expanded" : ""}`;
@@ -506,21 +525,22 @@ export function ProfilePage({
                 </div>
               )}
               <button className="profile-row-action" onClick={downloadData}>
-                <span><strong>Download my data</strong><small>Export your profile and progress as JSON.</small></span>
+                <span><strong>Download this device's dashboard data</strong><small>Export the dashboard data currently available in this browser. Server records are not included.</small></span>
                 <Icon name="arrow" />
               </button>
               <div className="danger-zone">
                 <strong>Delete my account</strong>
-                <p>This removes your profile and all locally saved progress.</p>
+                <p>This permanently deletes your account data on the server and dashboard data saved in this browser.</p>
                 {showDelete ? (
                   <div>
                     <label>Type DELETE to confirm<input value={deleteText} onChange={(event) => setDeleteText(event.target.value)} /></label>
-                    <Button variant="ghost" disabled={deleteText !== "DELETE"} onClick={onLogout}>Delete my account</Button>
+                    <Button variant="ghost" disabled={deleteText !== "DELETE" || isDeleting} onClick={deleteAccount}>{isDeleting ? "Deleting…" : "Delete my account"}</Button>
                     <button onClick={() => { setShowDelete(false); setDeleteText(""); }}>Cancel</button>
                   </div>
                 ) : (
                   <button onClick={() => setShowDelete(true)}>Delete my account</button>
                 )}
+                {deleteError && <p role="alert">{deleteError}</p>}
               </div>
             </div>
           </article>

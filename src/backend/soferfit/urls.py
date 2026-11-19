@@ -22,10 +22,12 @@ Including another URLconf
 URL configuration for soferfit project.
 """
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import include, path
+from . import test_error
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', include('accounts.urls')),      # Routes /api/auth/..., /api/me/, etc.
-    path('api/workouts/', include('workouts.urls')), # Routes /api/workouts/...
+    path('api/', include('accounts.urls')),
+    path('api/workouts/', include('workouts.urls')),
+    path('sentry-test-error/', test_error.sentry_test_error),
 ]

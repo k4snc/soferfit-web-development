@@ -73,21 +73,62 @@ export type FitnessProfile = {
 const API_URL = import.meta.env.VITE_API_URL?.replace(/\/$/, "") || "";
 const STORAGE_KEY = "soferfit-member";
 const ACCESS_TOKEN_KEY = "access_token";
+//const REFRESH_TOKEN_KEY = "refresh_token";
+// Token handling moved to HttpOnly cookies – no Authorization header needed
+// The browser will automatically include cookies on same‑origin requests.
+
 const REFRESH_TOKEN_KEY = "refresh_token";
 
-/**
- * Robust request wrapper with safe JSON parsing, network error handling, 
- * and detailed Django DRF error extraction.
- */
+export class ApiError extends Error {
+  constructor(message: string, readonly status: number | null = null) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
+// Token handling moved to HttpOnly cookies – no Authorization header needed
+// The browser will automatically include cookies on same‑origin requests.
+function formatErrorValue(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) {
+    return value.map(formatErrorValue).filter(Boolean).join(", ");
+  }
+  return "";
+}
+
+function getHttpErrorMessage(data: unknown, status: number): string {
+  if (status >= 500) return "The server encountered a problem. Please try again later.";
+
+  if (typeof data === "object" && data !== null && !Array.isArray(data)) {
+    const payload = data as Record<string, unknown>;
+    const detail = formatErrorValue(payload.detail);
+    if (detail) return detail;
+
+    const fieldErrors = Object.entries(payload)
+      .map(([field, errors]) => {
+        const message = formatErrorValue(errors);
+        return message ? `${field}: ${message}` : "";
+      })
+      .filter(Boolean)
+      .join(" | ");
+    if (fieldErrors) return fieldErrors;
+  }
+
+  if (status === 401) return "Your session has expired. Please sign in again.";
+  if (status === 403) return "You don't have permission to do that.";
+  if (status === 404) return "The requested API endpoint was not found. Check the URL and try again.";
+  if (status === 429) return "Too many requests. Please wait a moment and try again.";
+  return "We couldn't process your request. Please check the information and try again.";
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const token = localStorage.getItem(ACCESS_TOKEN_KEY);
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(options?.headers as Record<string, string>),
   };
-  
   if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
+    headers.Authorization = `Bearer ${token}`;
   }
 
   let response: Response;
@@ -96,40 +137,28 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
       ...options,
       headers,
     });
-  } catch (netErr) {
-    throw new Error("Network error: Unable to reach the backend server. Please check your connection.");
+  } catch {
+    throw new ApiError("Unable to reach the server. Check your connection and try again.");
   }
 
-  // Handle empty responses (e.g. 204 No Content, 205 Reset Content)
   if (response.status === 204 || response.status === 205) {
     return {} as T;
   }
 
   const text = await response.text();
-  let data: any = {};
-  try {
-    data = text ? JSON.parse(text) : {};
-  } catch {
-    data = { detail: text || "Invalid server response format." };
+  let data: unknown = {};
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      if (response.ok) {
+        throw new ApiError("The server returned an invalid response. Please try again.", response.status);
+      }
+    }
   }
 
   if (!response.ok) {
-    let errorMsg = "We couldn't process your request. Please check your credentials or network.";
-    
-    if (typeof data === "object" && data !== null) {
-      if (data.detail) {
-        errorMsg = typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail);
-      } else {
-        // Extract Django field-level validation errors cleanly
-        const fieldErrors = Object.entries(data)
-          .map(([field, errs]) => `${field}: ${Array.isArray(errs) ? errs.join(", ") : errs}`)
-          .join(" | ");
-        if (fieldErrors) {
-          errorMsg = fieldErrors;
-        }
-      }
-    }
-    throw new Error(errorMsg);
+    throw new ApiError(getHttpErrorMessage(data, response.status), response.status);
   }
 
   return data as T;
@@ -285,6 +314,23 @@ export const api = {
   async getMember(): Promise<Member | null> {
     if (API_URL) return request<Member>("/me/");
     return readLocalMember();
+  },
+
+  async deleteAccount(): Promise<boolean> {
+    if (API_URL) {
+      await request("/me/", { method: "DELETE" });
+    }
+
+    let cleared = true;
+    for (const key of [ACCESS_TOKEN_KEY, REFRESH_TOKEN_KEY, STORAGE_KEY]) {
+      try {
+        localStorage.removeItem(key);
+      } catch (error) {
+        console.error(`Failed to clear ${key} after account deletion:`, error);
+        cleared = false;
+      }
+    }
+    return cleared;
   },
 
   async getTodayWorkout(): Promise<any> {
