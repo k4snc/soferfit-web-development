@@ -4,6 +4,10 @@
 
 SoferFit is a React and TypeScript frontend backed by a Django REST Framework API. The local development stack runs the API with PostgreSQL and Redis through Docker Compose. The frontend can also run in demo mode without the API, using browser storage for supported flows.
 
+![SoferFit system architecture](images/soferfit-architecture.svg)
+
+The SVG above is the rendered architecture artifact for presentations and tools that do not render Mermaid. The Mermaid source below remains the editable version maintained with the documentation.
+
 ## System overview
 
 ~~~mermaid
