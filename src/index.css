@@ -174,29 +174,36 @@ svg { width: 1.1em; height: 1.1em; fill: none; stroke: currentColor; stroke-widt
 .segmented button.active { color: var(--white); background: var(--ink); }
 .body-wrap { position: relative; z-index: 1; display: flex; height: 100%; flex-direction: column; align-items: center; justify-content: center; }
 .body-map-chart {
-  --bm-background-opacity: 0;
-  --bm-max-height: 100%;
-  --bm-max-width: 290px;
-  --bm-padding: 0;
-  --bm-region-inactive-opacity: 1;
-  --bm-region-stroke: rgba(255,255,255,.68);
-  --bm-region-stroke-selected: #d8ff52;
-  --bm-region-stroke-focus: #d8ff52;
-  --bm-region-stroke-width: .12;
-  --bm-region-stroke-width-selected: .35;
-  --bm-region-stroke-width-focus: .45;
-  --bm-region-active-shadow: drop-shadow(0 0 1px rgba(249,115,22,.55));
-  --bm-region-focus-shadow: drop-shadow(0 0 1.5px rgba(255,255,255,.95)) drop-shadow(0 0 2.5px rgba(15,23,42,.9));
   width: 100%;
   height: 100%;
   min-height: 0;
+  display: grid;
+  place-items: center;
 }
-.body-map-chart .body-chart-container { padding: 0 !important; }
-.body-map-chart .body-chart-svg { width: 280px !important; max-width: 100%; max-height: 100%; filter: drop-shadow(0 20px 20px rgba(16,18,15,.1)); user-select: none; }
-.body-map-chart .body-chart-muscle[aria-pressed="true"] { fill: #ea580c !important; }
-.body-map-chart:not(.is-disabled) .body-chart-muscle:hover { fill: #f97316 !important; fill-opacity: 1 !important; }
-.body-map-chart .body-chart-muscle:focus-visible { outline: none; }
-.body-map-chart .gender-hair-detail { fill: #66685f; stroke: rgba(255,255,255,.55); stroke-width: .14; stroke-linejoin: round; }
+.body-map-chart .body-chart-svg {
+  width: 280px;
+  max-width: 100%;
+  max-height: 100%;
+  filter: drop-shadow(0 20px 20px rgba(16,18,15,.1));
+  user-select: none;
+}
+.body-map-chart .muscle-region {
+  fill: #c5c8be;
+  stroke: rgba(255,255,255,.68);
+  stroke-width: 1.5;
+  transition: fill 140ms ease;
+}
+.body-map-chart:not(.is-disabled) .muscle-region:hover {
+  fill: #f97316;
+}
+.body-map-chart .muscle-region[aria-pressed="true"] {
+  fill: #ea580c;
+}
+.body-map-chart .muscle-region:focus-visible {
+  outline: none;
+  stroke: #d8ff52;
+  stroke-width: 3;
+}
 
 .map-hint { 
   position: absolute; 

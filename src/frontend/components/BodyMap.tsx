@@ -1,273 +1,185 @@
+import { useMemo, useState } from "react";
+import type { Gender, Muscle, Orientation } from "../types";
 import {
-  BodyChart,
-  getMuscleDef,
-  MUSCLE_MAP,
-  ViewSide,
-} from "@emmorts/body-muscles"
+  type BodyPart,
+  SOFERFIT_TO_SVG_SLUG,
+  SVG_SLUG_LABELS,
+  SVG_SLUG_TO_PRIMARY_MUSCLE,
+  type SvgSlug,
+} from "./bodymap-svg/muscleAdapter";
+import { bodyFront } from "./bodymap-svg/bodyFront";
+import { bodyBack } from "./bodymap-svg/bodyBack";
+import { bodyFemaleFront } from "./bodymap-svg/bodyFemaleFront";
+import { bodyFemaleBack } from "./bodymap-svg/bodyFemaleBack";
 
-import type { BodyState, MuscleId } from "@emmorts/body-muscles"
+const NON_INTERACTIVE_SLUGS = new Set<SvgSlug>([
+  "head",
+  "hair",
+  "knees",
+  "ankles",
+  "feet",
+  "hands",
+]);
 
-import { useEffect, useMemo, useRef, useState } from "react"
-
-import type { Gender, Muscle, Orientation } from "../types"
-
-const SVG_NAMESPACE = "http://www.w3.org/2000/svg"
-const FRONT_HAIR_MIRROR_TRANSFORM = "translate(31.8 0) scale(-1 1)"
-const WOMAN_HAIR_PATHS: Record<Orientation, string[]> = {
-  Front: [
-    "M12.1 3.2 C10.8 3.8 10.5 5.4 10.9 7.1 C11.2 8.5 10.6 10.1 10.5 11.6 C10.4 12.7 10.8 13.5 11.4 14 C11.8 12.7 11.9 11.2 11.9 9.8 L11.8 6.2 Z",
-    "M12.1 3.2 C10.8 3.8 10.5 5.4 10.9 7.1 C11.2 8.5 10.6 10.1 10.5 11.6 C10.4 12.7 10.8 13.5 11.4 14 C11.8 12.7 11.9 11.2 11.9 9.8 L11.8 6.2 Z",
-  ],
-  Back: [
-    "M49.1 2.4 C47.5 3.3 47.1 5.5 47.7 7.4 C48.2 9 47.6 10.7 47.9 12.2 C48.1 13.2 48.7 13.8 49.4 14 C49.8 12.2 49.7 10.3 49.5 8.5 L49.2 5.2 Z",
-    "M55.9 2.4 C57.5 3.3 57.9 5.5 57.3 7.4 C56.8 9 57.4 10.7 57.1 12.2 C56.9 13.2 56.3 13.8 55.6 14 C55.2 12.2 55.3 10.3 55.5 8.5 L55.8 5.2 Z",
-  ],
-}
-
-function focusForRegion(id: MuscleId): Muscle | null {
-  if (id.startsWith("chest-upper-")) return "Upper Chest"
-
-  if (id.startsWith("chest-lower-")) return "Chest"
-
-  if (id.startsWith("abs-upper-")) return "Upper Abs"
-
-  if (id.startsWith("abs-lower-")) return "Lower Abs"
-
-  if (id.startsWith("obliques-") || id.startsWith("serratus-anterior-"))
-    return "Obliques"
-
-  if (id.startsWith("shoulder-front-")) return "Front Deltoid"
-
-  if (id.startsWith("shoulder-side-")) return "Shoulders"
-
-  if (id.startsWith("deltoid-rear-")) return "Rear Deltoid"
-
-  if (id.startsWith("traps-upper-")) return "Upper Trapezius"
-
-  if (id === "nape") return "Upper Trapezius"
-
-  if (id.startsWith("traps-mid-")) return "Mid Trapezius"
-
-  if (id.startsWith("traps-lower-")) return "Lower Trapezius"
-
-  if (id.startsWith("biceps-")) return "Biceps"
-
-  if (id.startsWith("triceps-")) return "Triceps"
-
-  if (
-    id.startsWith("forearm-") ||
-    id.startsWith("elbow-") ||
-    id.startsWith("hand-")
-  ) {
-    return "Forearms"
-  }
-
-  if (id.startsWith("lats-upper-")) return "Upper Lats"
-
-  if (id.startsWith("lats-mid-")) return "Mid Lats"
-
-  if (id.startsWith("lats-lower-")) return "Lower Lats"
-
-  if (id.startsWith("lower-back-") || id === "spine") return "Lower Back"
-
-  if (id.startsWith("gluteus-")) return "Gluteal"
-
-  if (id.startsWith("hamstrings-") || id.startsWith("adductors-"))
-    return "Hamstring"
-
-  if (
-    id.startsWith("calves-") ||
-    id.startsWith("tibialis-") ||
-    id.startsWith("foot-")
-  ) {
-    return "Calves"
-  }
-
-  if (id.startsWith("knee-back-")) return "Calves"
-
-  if (
-    id.startsWith("quads-") ||
-    id.startsWith("hip-flexor-") ||
-    id.startsWith("knee-")
-  ) {
-    return "Quads"
-  }
-
-  if (id.startsWith("neck-")) return "Shoulders"
-
-  return null
-}
-
-function isSelectedFocus(
-  regionFocus: Muscle | null,
-  selected: Muscle[],
-): boolean {
-  if (!regionFocus || selected.length === 0) return false
-
-  return selected.some((muscle) => {
-    if (regionFocus === muscle) return true
-    if (muscle === "Chest") return regionFocus === "Upper Chest"
-    if (muscle === "Core") {
-      return ["Upper Abs", "Lower Abs", "Obliques"].includes(regionFocus)
-    }
-    if (muscle === "Shoulders") {
-      return [
-        "Front Deltoid",
-        "Rear Deltoid",
-        "Upper Trapezius",
-        "Mid Trapezius",
-        "Lower Trapezius",
-      ].includes(regionFocus)
-    }
-    return false
-  })
-}
-
-function createBodyState(
-  selected: Muscle[],
-  fullBody: boolean,
-): BodyState {
-  const bodyState: BodyState = {}
-
-  for (const { id } of MUSCLE_MAP) {
-    if (fullBody || isSelectedFocus(focusForRegion(id), selected)) {
-      bodyState[id] = { intensity: 0, selected: true }
-    }
-  }
-
-  return bodyState
-}
+const HEAD_COLOR = "#d5d5d5";
+const HAIR_COLOR = "#3f3f3f";
+const BASE_MUSCLE_COLOR = "#c8c9c2";
+const HOVER_COLOR = "#a3a59b";
+const SELECTED_COLOR = "#acb841";
 
 export function BodyMap({
   gender,
-
   orientation,
-
   selected,
-
   fullBody,
-
   disabled,
-
   onSelect,
 }: {
-  gender: Gender
-
-  orientation: Orientation
-
-  selected: Muscle[]
-
-  fullBody: boolean
-
-  disabled: boolean
-
-  onSelect: (muscle: Muscle) => void
+  gender: Gender;
+  orientation: Orientation;
+  selected: Muscle[];
+  fullBody: boolean;
+  disabled: boolean;
+  onSelect: (muscle: Muscle) => void;
 }) {
-  const containerRef = useRef<HTMLDivElement>(null)
+  const [hoveredSlug, setHoveredSlug] = useState<SvgSlug | null>(null);
 
-  const chartRef = useRef<BodyChart | null>(null)
-
-  const onSelectRef = useRef(onSelect)
-
-  const [hoveredRegion, setHoveredRegion] = useState<string | null>(null)
-
-  const bodyState = useMemo(
-    () => createBodyState(selected, fullBody),
-    [selected, fullBody],
-  )
-
-  const view = orientation === "Front" ? ViewSide.FRONT : ViewSide.BACK
-
-  onSelectRef.current = onSelect
-
-  useEffect(() => {
-    if (!containerRef.current) return
-
-    const chart = new BodyChart(containerRef.current, {
-      view,
-
-      bodyState,
-
-      interactive: !disabled,
-
-      showTooltip: false,
-
-      ariaLabel: `${gender} ${orientation.toLowerCase()} muscle map`,
-
-      intensityColor: () => "#85877d",
-
-      onMuscleClick: (id) => {
-        const muscle = focusForRegion(id)
-
-        if (muscle) onSelectRef.current(muscle)
-      },
-
-      onMuscleHover: (id) => {
-        setHoveredRegion(id ? (getMuscleDef(id)?.name ?? null) : null)
-      },
-    })
-
-    chartRef.current = chart
-
-    return () => {
-      chart.destroy()
-
-      chartRef.current = null
+  const activeSlugs = useMemo(() => {
+    const slugs = new Set<SvgSlug>();
+    for (const muscle of selected) {
+      const mapped = SOFERFIT_TO_SVG_SLUG[muscle];
+      if (mapped) slugs.add(mapped);
     }
-  }, [disabled, orientation, view])
+    return slugs;
+  }, [selected]);
 
-  useEffect(() => {
-    chartRef.current?.update({
-      bodyState,
-
-      ariaLabel: `${gender} ${orientation.toLowerCase()} muscle map`,
-    })
-  }, [bodyState, gender, orientation])
-
-  useEffect(() => {
-    if (gender !== "Woman") return
-
-    const svg = containerRef.current?.querySelector("svg.body-chart-svg")
-    if (!svg)
-      throw new Error("Body-map SVG is unavailable for the hair detail.")
-
-    const background = svg.querySelector(".body-chart-background")
-    if (!background)
-      throw new Error("Body-map background is unavailable for the hair detail.")
-
-    const hair = document.createElementNS(SVG_NAMESPACE, "g")
-    hair.setAttribute("class", "gender-hair-detail")
-    hair.setAttribute("aria-hidden", "true")
-    hair.setAttribute("pointer-events", "none")
-
-    WOMAN_HAIR_PATHS[orientation].forEach((pathData, index) => {
-      const path = document.createElementNS(SVG_NAMESPACE, "path")
-      path.setAttribute("d", pathData)
-      if (orientation === "Front" && index === 1) {
-        path.setAttribute("transform", FRONT_HAIR_MIRROR_TRANSFORM)
-      }
-      hair.appendChild(path)
-    })
-
-    svg.insertBefore(hair, background.nextSibling)
-
-    return () => {
-      hair.remove()
+  const { parts, viewBox } = useMemo((): {
+    parts: BodyPart[];
+    viewBox: string;
+  } => {
+    if (gender === "Man") {
+      return orientation === "Front"
+        ? { parts: bodyFront, viewBox: "42 -15 640 1380" }
+        : { parts: bodyBack, viewBox: "758 -15 640 1380" };
     }
-  }, [gender, orientation])
+    return orientation === "Front"
+      ? { parts: bodyFemaleFront, viewBox: "-45 -95 730 1560" }
+      : { parts: bodyFemaleBack, viewBox: "780 -95 730 1560" };
+  }, [gender, orientation]);
+
+  const handlePartClick = (slug: SvgSlug) => {
+    if (disabled || NON_INTERACTIVE_SLUGS.has(slug)) return;
+    const mappedMuscle = SVG_SLUG_TO_PRIMARY_MUSCLE[slug];
+    if (mappedMuscle) {
+      onSelect(mappedMuscle);
+    }
+  };
+
+  const getFill = (part: BodyPart) => {
+    if (part.slug === "head") return HEAD_COLOR;
+    if (part.slug === "hair") return HAIR_COLOR;
+    if (NON_INTERACTIVE_SLUGS.has(part.slug)) return BASE_MUSCLE_COLOR;
+    if (fullBody || activeSlugs.has(part.slug)) return SELECTED_COLOR;
+    if (!disabled && hoveredSlug === part.slug) return HOVER_COLOR;
+    return BASE_MUSCLE_COLOR;
+  };
+
+  const hoveredLabel = hoveredSlug ? SVG_SLUG_LABELS[hoveredSlug] ?? null : null;
 
   return (
     <div className="body-wrap">
       <div
-        ref={containerRef}
         className={`body-map-chart body-${gender.toLowerCase()} ${
           disabled ? "is-disabled" : ""
         }`}
+        style={{
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
         aria-label={`${gender} muscle map`}
-      />
-      <span className={`map-hint ${selected.length > 0 || fullBody ? "hidden" : ""}`}>
-        {hoveredRegion || "Choose a muscle group to focus your routine"}
+      >
+        <svg
+          key={`${gender}-${orientation}`}
+          className="body-svg-animate"
+          viewBox={viewBox}
+          preserveAspectRatio="xMidYMid meet"
+          style={{
+            width: "auto",
+            height: "92%",
+            maxHeight: "650px",
+            minHeight: "520px",
+            display: "block",
+            filter: "drop-shadow(0px 14px 18px rgba(40, 41, 36, 0.18))",
+          }}
+          role="img"
+          aria-label={`${gender} ${orientation.toLowerCase()} muscle map`}
+        >
+          {parts.map((part, index) => {
+            const isInteractive =
+              !disabled &&
+              !NON_INTERACTIVE_SLUGS.has(part.slug) &&
+              Boolean(SVG_SLUG_TO_PRIMARY_MUSCLE[part.slug]);
+
+            const label = SVG_SLUG_LABELS[part.slug];
+            const isPressed = fullBody || activeSlugs.has(part.slug);
+
+            const paths = [
+              ...(part.path.common ?? []),
+              ...(part.path.left ?? []),
+              ...(part.path.right ?? []),
+            ];
+
+            return (
+              <g
+                key={`${part.slug}-${index}`}
+                data-muscle={part.slug}
+                onClick={() => handlePartClick(part.slug)}
+                onMouseEnter={() => isInteractive && setHoveredSlug(part.slug)}
+                onMouseLeave={() => isInteractive && setHoveredSlug(null)}
+                style={{ cursor: isInteractive ? "pointer" : "default" }}
+              >
+                {paths.map((d, pathIndex) => {
+                  const isPrimaryButton = isInteractive && pathIndex === 0;
+                  return (
+                    <path
+                      key={pathIndex}
+                      d={d}
+                      fill={getFill(part)}
+                      stroke="#6e7068"
+                      strokeWidth="1.2"
+                      role={isPrimaryButton ? "button" : undefined}
+                      tabIndex={isPrimaryButton ? 0 : undefined}
+                      aria-label={isPrimaryButton && label ? label : undefined}
+                      aria-pressed={isPrimaryButton ? isPressed : undefined}
+                      onKeyDown={
+                        isPrimaryButton
+                          ? (e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                handlePartClick(part.slug);
+                              }
+                            }
+                          : undefined
+                      }
+                    />
+                  );
+                })}
+              </g>
+            );
+          })}
+        </svg>
+      </div>
+
+      <span
+        className={`map-hint ${
+          selected.length > 0 || fullBody ? "hidden" : ""
+        }`}
+      >
+        {hoveredLabel || "Choose a muscle group to focus your routine"}
       </span>
     </div>
-  )
+  );
 }

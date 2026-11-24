@@ -1,17 +1,15 @@
 # Third-Party Notices
 
-This application uses `@emmorts/body-muscles` 2.1.1 for its SVG anatomy and interactive body-map
-rendering. The package is licensed under Apache License 2.0; the license text is included in
-[licenses/BODY-MUSCLES-APACHE-2.0.txt](./licenses/BODY-MUSCLES-APACHE-2.0.txt).
+This application uses male and female SVG anatomical path datasets derived from
+`react-native-body-highlighter` (`src/frontend/data/body-svg/`) for its interactive muscle map.
+The project is licensed under the MIT License; the full license text is included in
+[licenses/REACT-NATIVE-BODY-HIGHLIGHTER-MIT.txt](./licenses/REACT-NATIVE-BODY-HIGHLIGHTER-MIT.txt).
 
-## Body Muscles
+## react-native-body-highlighter
 
-Body Muscles
-Copyright 2024 Ivan Vulović
+Copyright (c) 2022 ELABBASSI Hicham
 
-This product includes software developed by Ivan Vulović.
-https://github.com/vulovix/body-muscles
+This software includes SVG body path data derived from `react-native-body-highlighter`:
+https://github.com/HichamELBSI/react-native-body-highlighter
 
-This distribution, `@emmorts/body-muscles`, is a modified version maintained by emmorts.
-https://github.com/emmorts/body-muscles
-Modifications are described in the package's CHANGELOG.md.
+The original React Native SVG path coordinates were extracted and adapted for standard web `<svg>` rendering in `BodyMap.tsx`.

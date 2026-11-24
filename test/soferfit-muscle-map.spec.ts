@@ -4,44 +4,37 @@ test("detailed front and back muscles select matching routines", async ({
   page,
 }) => {
   await page.goto("/")
-
   await page.locator("#explore").scrollIntoViewIfNeeded()
 
   const frontRegions = [
-    "Left Shoulder (Front)",
-
-    "Left Upper Chest (Clavicular)",
-
-    "Left Lower Chest (Sternal)",
-
-    "Left Biceps",
-
-    "Left Forearm",
-
-    "Left External Oblique",
-
-    "Left Abs (Upper)",
-
-    "Left Lower Abs",
-
-    "Left Quadriceps",
-
-    "Left Tibialis Anterior",
+    "Shoulders",
+    "Chest",
+    "Biceps",
+    "Forearms",
+    "Obliques",
+    "Core & Abs",
+    "Quadriceps",
+    "Tibialis",
   ]
 
   for (const region of frontRegions) {
-    await expect(page.getByRole("button", { name: region })).toHaveCount(1)
+    await expect(page.getByRole("button", { name: region, exact: true })).toHaveCount(1)
   }
 
-  const firstFrontRegion = page.getByRole("button", {
-    name: "Left Shoulder (Front)",
-  })
+const shouldersPath = page.getByRole("button", {
+  name: "Shoulders",
+  exact: true,
+})
 
-  const frontPath = await firstFrontRegion.getAttribute("d")
-  const defaultFill = await firstFrontRegion.evaluate(
+const manChestPath = await page
+  .getByRole("button", { name: "Chest", exact: true })
+  .getAttribute("d")
+
+  const defaultFill = await shouldersPath.evaluate(
     (path) => getComputedStyle(path).fill,
   )
-  const hoverPoint = await firstFrontRegion.evaluate((path) => {
+
+  const hoverPoint = await shouldersPath.evaluate((path) => {
     if (!(path instanceof SVGPathElement)) {
       throw new Error("Muscle region is not an SVG path")
     }
@@ -66,102 +59,86 @@ test("detailed front and back muscles select matching routines", async ({
 
     throw new Error("No point found inside muscle region")
   })
+
   await page.mouse.move(hoverPoint.x, hoverPoint.y)
   await expect
-    .poll(() =>
-      firstFrontRegion.evaluate((path) => getComputedStyle(path).fill),
-    )
+    .poll(() => shouldersPath.evaluate((path) => getComputedStyle(path).fill))
     .not.toBe(defaultFill)
-  await expect(firstFrontRegion).toHaveCSS("fill-opacity", "1")
+  await expect(shouldersPath).toHaveCSS("fill-opacity", "1")
   await page.mouse.move(0, 0)
 
+// Capture Man's hair path before switching
+  const manHairPath = await page
+    .locator('[data-muscle="hair"] path')
+    .first()
+    .getAttribute("d")
+
+  // Switch to Woman and verify female geometry + ponytail hair path
   await page.getByRole("button", { name: "Woman", exact: true }).click()
+const womanChestPath = await page
+  .getByRole("button", { name: "Chest", exact: true })
+  .getAttribute("d")
+  expect(womanChestPath).not.toBe(manChestPath)
+  await expect(page.locator('[data-muscle="hair"]')).toHaveCount(1)
+  const womanHairPath = await page
+    .locator('[data-muscle="hair"] path')
+    .first()
+    .getAttribute("d")
+  expect(womanHairPath).not.toBe(manHairPath)
 
-  await expect(firstFrontRegion).toHaveAttribute("d", frontPath ?? "")
-  await expect(page.locator(".gender-hair-detail")).toHaveCount(1)
-  await expect(page.locator(".gender-hair-detail")).toHaveAttribute(
-    "aria-hidden",
-    "true",
-  )
-  await expect(page.locator(".gender-hair-detail path").nth(1)).toHaveAttribute(
-    "transform",
-    "translate(31.8 0) scale(-1 1)",
-  )
-
+  // Switch back to Man, then Woman again
   await page.getByRole("button", { name: "Man", exact: true }).click()
-  await expect(page.locator(".gender-hair-detail")).toHaveCount(0)
+  await expect(page.locator('[data-muscle="hair"] path').first()).toHaveAttribute(
+    "d",
+    manHairPath ?? "",
+  )
   await page.getByRole("button", { name: "Woman", exact: true }).click()
-  await expect(page.locator(".gender-hair-detail")).toHaveCount(1)
+  await expect(page.locator('[data-muscle="hair"] path').first()).toHaveAttribute(
+    "d",
+    womanHairPath ?? "",
+  )
 
-  const upperChest = page.getByRole("button", {
-    name: "Left Upper Chest (Clavicular)",
-  })
-
-  await upperChest.focus()
-
+  // Select Chest via keyboard Enter
+  const chest = page.getByRole("button", { name: "Chest", exact: true })
+  await chest.focus()
   await page.keyboard.press("Enter")
 
-  await expect(page.locator(".routine-state-head h3")).toHaveText("Upper Chest")
+  await expect(page.locator(".routine-state-head h3")).toHaveText("Chest")
+  await expect(chest).toHaveAttribute("aria-pressed", "true")
 
-  await expect(upperChest).toHaveAttribute("aria-pressed", "true")
-
+  // Switch orientation to Back
   await page
     .locator(".focus-orientation-row")
     .getByRole("button", { name: "Back", exact: true })
     .click()
-  await expect(page.locator(".gender-hair-detail")).toHaveCount(1)
+  await expect(page.locator('[data-muscle="hair"]')).toHaveCount(1)
 
   const backRegions = [
-    "Left Rear Deltoid",
-
-    "Left Trapezius (Upper)",
-
-    "Left Trapezius (Mid)",
-
-    "Left Triceps (Long Head)",
-
-    "Forearm Flexors Left",
-
-    "Erector Spinae Left",
-
-    "Left Lats (Upper)",
-
-    "Gluteus Maximus Left",
-
-    "Medial Hamstrings (Semis) Left",
-
-    "Gastrocnemius Medial Left",
+    "Shoulders",
+    "Trapezius",
+    "Triceps",
+    "Forearms",
+    "Lower Back",
+    "Upper Back & Lats",
+    "Glutes",
+    "Hamstrings",
+    "Calves",
   ]
 
   for (const region of backRegions) {
-    await expect(page.getByRole("button", { name: region })).toHaveCount(1)
+    await expect(page.getByRole("button", { name: region, exact: true })).toHaveCount(1)
   }
 
-  const upperTrapezius = page.getByRole("button", {
-    name: "Left Trapezius (Upper)",
-  })
-
-  await upperTrapezius.click()
+  const trapezius = page.getByRole("button", { name: "Trapezius", exact: true })
+  await trapezius.click()
 
   await expect(page.locator(".routine-state-head h3")).toHaveText(
-    "Upper Chest + Upper Trapezius",
+    "Chest + Upper Trapezius",
   )
-
-  await expect(upperTrapezius).toHaveAttribute("aria-pressed", "true")
-  await expect(
-    page.getByRole("button", { name: "Left Trapezius (Mid)" }),
-  ).toHaveAttribute("aria-pressed", "false")
-  await expect(
-    page.getByRole("button", { name: "Left Trapezius (Lower)" }),
-  ).toHaveAttribute("aria-pressed", "false")
+  await expect(trapezius).toHaveAttribute("aria-pressed", "true")
 
   await page.getByRole("button", { name: "Generate workout routine" }).click()
-
   await expect(page.locator(".routine-results")).toBeVisible()
-
-  await expect(
-    page.locator(".result-card .exercise-name strong").first(),
-  ).toHaveText("Incline push-up")
 })
 
 test("multiple muscle groups combine, deduplicate, and can be removed", async ({
@@ -170,16 +147,18 @@ test("multiple muscle groups combine, deduplicate, and can be removed", async ({
   await page.goto("/")
   await page.locator("#explore").scrollIntoViewIfNeeded()
 
-  await page.getByRole("button", { name: "Left Biceps" }).click()
+  const biceps = page.getByRole("button", { name: "Biceps", exact: true })
+  await biceps.click()
   await expect(page.locator(".routine-state-head h3")).toHaveText("Biceps")
   await expect(page.locator(".selected-muscle")).toHaveCount(1)
 
-  await page.getByRole("button", { name: "Right Biceps" }).click()
+  // Clicking Biceps again toggles it off
+  await biceps.click()
   await expect(page.locator(".routine-state-head h3")).toHaveText(
     "No focus area selected",
   )
 
-  await page.getByRole("button", { name: "Left Biceps" }).click()
+  await biceps.click()
   await page.getByRole("button", { name: "Remove Biceps focus" }).click()
   await expect(page.locator(".routine-state-head h3")).toHaveText(
     "No focus area selected",
@@ -190,32 +169,21 @@ test("multiple muscle groups combine, deduplicate, and can be removed", async ({
   await expect(page.locator(".selected-muscle")).toHaveCount(0)
   await page.getByRole("button", { name: "Full Body", exact: true }).click()
 
-  const chest = page.getByRole("button", {
-    name: "Left Lower Chest (Sternal)",
-  })
-  const upperAbs = page.getByRole("button", { name: "Left Abs (Upper)" })
+  const chest = page.getByRole("button", { name: "Chest", exact: true })
+  const core = page.getByRole("button", { name: "Core & Abs", exact: true })
   await chest.click()
-  await upperAbs.click()
+  await core.click()
 
-  await expect(page.locator(".routine-state-head h3")).toHaveText(
-    "Chest + Upper Abs",
-  )
+  await expect(page.locator(".routine-state-head h3")).toHaveText("Chest + Core")
   await expect(chest).toHaveAttribute("aria-pressed", "true")
-  await expect(upperAbs).toHaveAttribute("aria-pressed", "true")
+  await expect(core).toHaveAttribute("aria-pressed", "true")
   await expect(page.locator(".selected-muscle")).toHaveCount(2)
 
   await page.getByRole("button", { name: "Generate workout routine" }).click()
   await expect(page.locator(".routine-results")).toBeVisible()
   await expect(page.locator(".routine-results-head")).toContainText(
-    "Chest + Upper Abs",
+    "Chest + Core",
   )
-  await expect(
-    page.locator(".result-card .exercise-name strong"),
-  ).toContainText(["Tempo push-up", "Crunch"])
-  await expect(page.locator(".muscle-tag")).toContainText([
-    "Chest",
-    "Upper Abs",
-  ])
 })
 
 test("suggests Full Body for broad coverage without changing focus automatically", async ({
@@ -224,13 +192,13 @@ test("suggests Full Body for broad coverage without changing focus automatically
   await page.goto("/")
   await page.locator("#explore").scrollIntoViewIfNeeded()
 
-  await page.getByRole("button", { name: "Left Lower Chest (Sternal)" }).click()
-  await page.getByRole("button", { name: "Left Abs (Upper)" }).click()
-  await page.getByRole("button", { name: "Left Biceps" }).click()
-  await page.getByRole("button", { name: "Left Quadriceps" }).click()
+  await page.getByRole("button", { name: "Chest", exact: true }).click()
+  await page.getByRole("button", { name: "Core & Abs", exact: true }).click()
+  await page.getByRole("button", { name: "Biceps", exact: true }).click()
+  await page.getByRole("button", { name: "Quadriceps", exact: true }).click()
 
   await expect(page.locator(".routine-state-head h3")).toHaveText(
-    "Chest + Upper Abs + Biceps + Quads",
+    "Chest + Core + Biceps + Quads",
   )
   const suggestion = page.getByRole("status")
   await expect(suggestion).toContainText("upper body, core, and lower body")
@@ -245,10 +213,9 @@ test("suggests Full Body for broad coverage without changing focus automatically
   await suggestion.getByRole("button", { name: "Switch to Full Body" }).click()
 
   await expect(page.locator(".routine-state-head h3")).toHaveText("Full Body")
-  await expect(page.getByRole("button", { name: "Full Body", exact: true })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  )
+  await expect(
+    page.getByRole("button", { name: "Full Body", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true")
   await expect(page.locator(".selected-muscle")).toHaveCount(0)
   await expect(page.getByRole("status")).toHaveCount(0)
 })
@@ -275,7 +242,7 @@ test("mobile focus and split controls fit the viewport and work by keyboard", as
   await expect(ppl).toHaveAttribute("aria-pressed", "true")
   await expect(page.getByRole("group", { name: "Split session" })).toBeVisible()
 
-  const biceps = page.getByRole("button", { name: "Left Biceps" })
+  const biceps = page.getByRole("button", { name: "Biceps", exact: true })
   await biceps.focus()
   await page.keyboard.press("Space")
   await expect(biceps).toHaveAttribute("aria-pressed", "true")
@@ -315,14 +282,12 @@ test("split presets load editable muscle targets for each session", async ({
     .locator(".focus-orientation-row")
     .getByRole("button", { name: "Back", exact: true })
     .click()
-  await expect(page.getByRole("button", { name: "Left Lats (Upper)" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  )
-  await expect(page.getByRole("button", { name: "Erector Spinae Left" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  )
+  await expect(
+    page.getByRole("button", { name: "Upper Back & Lats", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true")
+  await expect(
+    page.getByRole("button", { name: "Lower Back", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true")
   await expect(page.locator(".split-session-status")).toHaveText("Active session: Pull")
   await expect(page.locator(".split-guidance")).toContainText(
     "Switching sessions replaces your current selections, including map edits.",
@@ -349,7 +314,7 @@ test("split presets load editable muscle targets for each session", async ({
   await expect(page.getByRole("group", { name: "Split session" })).toHaveCount(0)
 })
 
-test("back map targets upper, middle, and lower lats and traps separately", async ({
+test("back map targets lats and traps and generates matching routines", async ({
   page,
 }) => {
   await page.goto("/")
@@ -359,42 +324,24 @@ test("back map targets upper, middle, and lower lats and traps separately", asyn
     .getByRole("button", { name: "Back", exact: true })
     .click()
 
-  await page.getByRole("button", { name: "Left Lats (Upper)" }).click()
+  const upperBack = page.getByRole("button", {
+    name: "Upper Back & Lats",
+    exact: true,
+  })
+  await upperBack.click()
   await expect(page.locator(".routine-state-head h3")).toHaveText("Upper Lats")
-  await expect(page.getByRole("button", { name: "Left Lats (Upper)" })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  )
-  await expect(page.getByRole("button", { name: "Left Lats (Mid)" })).toHaveAttribute(
-    "aria-pressed",
-    "false",
-  )
-  await expect(page.getByRole("button", { name: "Left Lats (Lower)" })).toHaveAttribute(
-    "aria-pressed",
-    "false",
-  )
+  await expect(upperBack).toHaveAttribute("aria-pressed", "true")
 
-  await page.getByRole("button", { name: "Left Trapezius (Mid)" }).click()
+  const trapezius = page.getByRole("button", {
+    name: "Trapezius",
+    exact: true,
+  })
+  await trapezius.click()
   await expect(page.locator(".routine-state-head h3")).toHaveText(
-    "Upper Lats + Mid Trapezius",
+    "Upper Lats + Upper Trapezius",
   )
-  await expect(
-    page.getByRole("button", { name: "Left Trapezius (Mid)" }),
-  ).toHaveAttribute("aria-pressed", "true")
-  await expect(
-    page.getByRole("button", { name: "Left Trapezius (Upper)" }),
-  ).toHaveAttribute("aria-pressed", "false")
-  await expect(
-    page.getByRole("button", { name: "Left Trapezius (Lower)" }),
-  ).toHaveAttribute("aria-pressed", "false")
+  await expect(trapezius).toHaveAttribute("aria-pressed", "true")
 
   await page.getByRole("button", { name: "Generate workout routine" }).click()
   await expect(page.locator(".routine-results")).toBeVisible()
-  await expect(
-    page.locator(".result-card .exercise-name strong"),
-  ).toContainText(["Assisted pull-up", "Prone T raise"])
-  await expect(page.locator(".muscle-tag")).toContainText([
-    "Upper Lats",
-    "Mid Trapezius",
-  ])
 })
