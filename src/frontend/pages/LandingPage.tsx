@@ -1,6 +1,6 @@
 import type { Dispatch, ReactNode, SetStateAction } from "react";
 import welcomeImage from "../assets/welcome-training.png";
-import { BodyMap } from "../components/bodymap-svg";
+import { BodyMap } from "../components/BodyMap.tsx";
 import { Button } from "../components/Button";
 import { Icon } from "../components/Icon";
 import { InfoTip } from "../components/InfoTip";
