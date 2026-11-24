@@ -102,6 +102,8 @@ export function BodyMap({
         aria-label={`${gender} muscle map`}
       >
         <svg
+          key={`${gender}-${orientation}`}
+          className="body-svg-animate"
           viewBox={viewBox}
           preserveAspectRatio="xMidYMid meet"
           style={{
@@ -121,6 +123,9 @@ export function BodyMap({
               !NON_INTERACTIVE_SLUGS.has(part.slug) &&
               Boolean(SVG_SLUG_TO_PRIMARY_MUSCLE[part.slug]);
 
+            const label = SVG_SLUG_LABELS[part.slug];
+            const isPressed = fullBody || activeSlugs.has(part.slug);
+
             const paths = [
               ...(part.path.common ?? []),
               ...(part.path.left ?? []),
@@ -136,15 +141,32 @@ export function BodyMap({
                 onMouseLeave={() => isInteractive && setHoveredSlug(null)}
                 style={{ cursor: isInteractive ? "pointer" : "default" }}
               >
-                {paths.map((d, pathIndex) => (
-                  <path
-                    key={pathIndex}
-                    d={d}
-                    fill={getFill(part)}
-                    stroke="#6e7068"
-                    strokeWidth="1.2"
-                  />
-                ))}
+                {paths.map((d, pathIndex) => {
+                  const isPrimaryButton = isInteractive && pathIndex === 0;
+                  return (
+                    <path
+                      key={pathIndex}
+                      d={d}
+                      fill={getFill(part)}
+                      stroke="#6e7068"
+                      strokeWidth="1.2"
+                      role={isPrimaryButton ? "button" : undefined}
+                      tabIndex={isPrimaryButton ? 0 : undefined}
+                      aria-label={isPrimaryButton && label ? label : undefined}
+                      aria-pressed={isPrimaryButton ? isPressed : undefined}
+                      onKeyDown={
+                        isPrimaryButton
+                          ? (e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                handlePartClick(part.slug);
+                              }
+                            }
+                          : undefined
+                      }
+                    />
+                  );
+                })}
               </g>
             );
           })}
