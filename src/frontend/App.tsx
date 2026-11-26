@@ -60,6 +60,13 @@ function App() {
     setIsSignedIn(false);
     setAppToast("You've been logged out.");
     navigate("/", true);
+  }} onAccountDeleted={(browserDataCleared) => {
+    setMemberProfile(null);
+    setIsSignedIn(false);
+    setAppToast(browserDataCleared
+      ? "Your account and data on this device have been deleted."
+      : "Your account was deleted, but this browser could not clear all local data. Clear this site's browser storage.");
+    navigate("/", true);
   }} />;
 
   return (
@@ -132,7 +139,9 @@ function App() {
           setMemberProfile(completeProfile);
           localStorage.setItem("soferfit-member", JSON.stringify({ id: crypto.randomUUID(), email: profile.email, createdAt: new Date().toISOString() }));
           clearFitnessStore();
-          writeFitnessStore(readFitnessStore(completeProfile));
+          if (!writeFitnessStore(readFitnessStore(completeProfile))) {
+            setAppToast("Your account was created, but this browser could not save dashboard data.");
+          }
           setIsSignedIn(true);
           setShowSignup(false);
           navigate("/dashboard");

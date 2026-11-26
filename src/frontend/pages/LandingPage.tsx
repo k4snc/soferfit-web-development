@@ -109,7 +109,7 @@ export function LandingPage({
       <section className="hero shell">
         <div className="hero-copy">
           <h1>Your body.<br />Your goals.</h1>
-          <p>Adaptive training tailored to your body type, designed for weight management, and structured 60–90 day challenges.</p>
+          <p>Build a 60–90 day workout schedule and choose rule-based workouts from a prewritten exercise list.</p>
           <ReviewCarousel />
           <div className="hero-trust-actions">
             <div className="trust-row">
@@ -136,7 +136,7 @@ export function LandingPage({
           </div>
           <div className="float-card plan-card">
             <span className="card-icon"><Icon name="spark" /></span>
-            <div><small>SMART PLANNING</small><strong>Adapts to you</strong></div>
+            <div><small>BUILT FROM YOUR CHOICES</small><strong>Focus + schedule</strong></div>
           </div>
           <div className="float-card coach-card">
             <span className="card-icon"><Icon name="check" /></span>
@@ -158,7 +158,7 @@ export function LandingPage({
           <h2>Everything you need to<br /><em>keep showing up.</em></h2>
         </div>
         <div className="feature-grid">
-          <article><div className="feature-icon feature-icon-violet"><Icon name="spark" /></div><h3>AI-made for you</h3><p>Plans are made based on your body type, equipment access, and fat-reduction goals.</p></article>
+          <article><div className="feature-icon feature-icon-violet"><Icon name="spark" /></div><h3>Template-based routines</h3><p>Rule-based workout templates use prewritten exercises. No AI model or external AI service is used.</p></article>
           <article><div className="feature-icon feature-icon-violet"><Icon name="calendar" /></div><h3>Progress, made visible</h3><p>A calendar heatmap, active workouts, streaks, and meaningful stats in one view.</p></article>
           <article><div className="feature-icon feature-icon-violet"><Icon name="bolt" /></div><h3>Encouragement</h3><p>Step-by-step guidance, active countdown timers, set/rep counters, and real-time encouragement.</p></article>
         </div>
@@ -168,7 +168,7 @@ export function LandingPage({
         <div className="shell">
           <div className="challenge-copy">
             <h2>One challenge.<br /><em>Built around you.</em></h2>
-            <p>Tell us your starting point, schedule, equipment, and goal. SoferFit shapes every session—and adapts to you.</p>
+            <p>Choose your schedule, equipment, and goal. SoferFit builds a basic schedule from its prewritten workout templates.</p>
             <ul>
               <li><Icon name="check" /> Choose a 60 or 90-day roadmap</li>
               <li><Icon name="check" /> Smart recovery and session adjustments</li>
@@ -397,7 +397,7 @@ export function LandingPage({
                 </span>
                 <div className="routine-state-action">
                   <Button disabled={!focusArea || !mode || !equipment} onClick={() => setRoutineState("loading")}>Generate workout routine </Button>
-                  <small>AI generation is limited, use wisely.</small>
+                  <small>Template routine builds are limited to 3 per week.</small>
                 </div>
               </div>
             )}
@@ -445,11 +445,23 @@ export function LandingPage({
         <div className="shell footer-divider" />
         <div className="shell footer-bottom">
           <p>© 2026 SoferFit. All rights reserved.</p>
-          <nav aria-label="Legal links">
+          <nav aria-label="Project information">
             <button className="footer-glossary" onClick={() => openGlossary()}> Glossary</button>
-            <a href="#privacy-policy">Privacy Policy</a>
-            <a href="#terms-of-service">Terms of Service</a>
-            <a href="#cookies">Cookies</a>
+            <details className="footer-privacy">
+              <summary>Demo privacy & data</summary>
+              <div className="footer-privacy-content">
+                <strong>Internal demo notice — not a reviewed legal policy</strong>
+                <p>Do not use real accounts or enter real health, injury, body-measurement, or progress-photo data.</p>
+                <ul>
+                  <li>Without a backend, account and dashboard data are saved in this browser's local storage.</li>
+                  <li>With a backend, account details, fitness-profile fields, saved plans, and workout sessions can be sent to Django. Progress photos remain in this browser.</li>
+                  <li>Backend authentication tokens are currently stored in browser local storage. This is not an approved production session design.</li>
+                  <li>Routine generation uses fixed templates in the browser; it does not call an AI service or medically assess injuries.</li>
+                  <li>Account deletion removes server-side account data and dashboard data on this device. Minimal revoked-token identifiers remain until expiration; backup retention is not configured for this demo.</li>
+                </ul>
+                <p>Before accepting real users, approve a privacy notice, retention and backup-deletion rules, and the applicable privacy obligations with a responsible adviser.</p>
+              </div>
+            </details>
           </nav>
         </div>
       </footer>

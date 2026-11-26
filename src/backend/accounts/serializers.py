@@ -1,13 +1,16 @@
 from rest_framework import serializers
 from rest_framework.exceptions import AuthenticationFailed
 from django.contrib.auth.models import User
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db import IntegrityError, transaction
 from .models import UserProfile, FitnessProfile
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, min_length=6)
+    password = serializers.CharField(write_only=True, trim_whitespace=False)
     email = serializers.EmailField(required=True)
 
     class Meta:
@@ -15,9 +18,22 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         fields = ['email', 'password']
 
     def validate_email(self, value):
-        if User.objects.filter(email=value).exists():
+        normalized_email = value.strip().lower()
+        if User.objects.filter(email__iexact=normalized_email).exists():
             raise serializers.ValidationError("A user with this email already exists.")
-        return value
+        return normalized_email
+
+    def validate(self, attrs):
+        email = attrs["email"]
+        candidate_user = User(
+            username=email.split("@", 1)[0],
+            email=email,
+        )
+        try:
+            validate_password(attrs["password"], user=candidate_user)
+        except DjangoValidationError as error:
+            raise serializers.ValidationError({"password": error.messages}) from error
+        return attrs
 
     def create(self, validated_data):
         email = validated_data['email']
@@ -30,18 +46,24 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             username = f"{base_username}{counter}"
             counter += 1
 
-        # Create user with hashed password
-        user = User.objects.create_user(
-            username=username,
-            email=email,
-            password=validated_data['password']
-        )
-        
-        # Ensure UserProfile exists and strictly enforce 'member' role for public signups
-        profile, created = UserProfile.objects.get_or_create(user=user)
-        profile.role = 'member'
-        profile.save()
-        
+        try:
+            with transaction.atomic():
+                user = User.objects.create_user(
+                    username=username,
+                    email=email,
+                    password=validated_data['password'],
+                )
+
+                profile, _ = UserProfile.objects.get_or_create(user=user)
+                profile.role = 'member'
+                profile.save()
+        except IntegrityError as error:
+            if User.objects.filter(email__iexact=email).exists():
+                raise serializers.ValidationError({
+                    "email": "A user with this email already exists.",
+                }) from error
+            raise
+
         return user
 
 

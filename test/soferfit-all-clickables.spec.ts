@@ -24,6 +24,17 @@ test.describe('SoferFit Comprehensive Click & Interaction Audit', () => {
     }
   });
 
+  test('demo privacy disclosure explains storage and safety limits', async ({ page }) => {
+    await page.goto('/');
+
+    const disclosure = page.locator('.footer-privacy');
+    await disclosure.locator('summary').click();
+
+    await expect(disclosure.getByText(/Internal demo notice/)).toBeVisible();
+    await expect(disclosure.getByText(/Do not use real accounts or enter real health/)).toBeVisible();
+    await expect(disclosure.getByText(/does not call an AI service or medically assess injuries/)).toBeVisible();
+  });
+
   test('Dashboard and all member navigation tabs are fully clickable', async ({ page }) => {
     await page.goto('/dashboard');
 

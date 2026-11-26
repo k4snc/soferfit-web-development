@@ -285,18 +285,22 @@ export function readFitnessStore(profile?: ProfileSeed | null): FitnessStore {
   return createFitnessStore(profile ?? {});
 }
 
-export function writeFitnessStore(store: FitnessStore) {
+export function writeFitnessStore(store: FitnessStore): boolean {
   try {
     localStorage.setItem(STORE_KEY, JSON.stringify(store));
+    return true;
   } catch (err) {
     console.error("Failed to write fitness store to localStorage:", err);
+    return false;
   }
 }
 
-export function clearFitnessStore() {
+export function clearFitnessStore(): boolean {
   try {
     localStorage.removeItem(STORE_KEY);
+    return true;
   } catch (err) {
     console.error("Failed to clear fitness store from localStorage:", err);
+    return false;
   }
 }

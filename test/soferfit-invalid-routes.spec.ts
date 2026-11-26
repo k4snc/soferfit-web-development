@@ -2,26 +2,46 @@ import { test, expect } from '@playwright/test';
 
 test.describe('SoferFit Invalid URL & Fallback Routing', () => {
 
-  test('Random non-existent frontend route displays graceful fallback', async ({ page }) => {
-    // Navigate to a completely bogus route
-    const response = await page.goto('/dashboard/nonexistent-page-123456');
+  test('unknown dashboard routes display a not-found page', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('soferfit-member', JSON.stringify({
+        id: 'route-test-member',
+        email: 'route-test@example.test',
+        createdAt: new Date().toISOString(),
+      }));
+    });
 
-    // Ensure the app doesn't throw a raw 500 server crash or blank screen
-    // It should either render an empty state, redirect, or display fallback UI
-    await page.waitForTimeout(1000);
-    const bodyContent = await page.textContent('body');
-    expect(bodyContent).not.toContain('Uncaught ReferenceError');
-    expect(bodyContent).not.toContain('TypeError: Cannot read properties of undefined');
+    await page.goto('/dashboard/nonexistent-page-123456');
+
+    await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Go to dashboard' })).toBeVisible();
+  });
+
+  test('malformed workout-session URLs display a recoverable not-found page', async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('soferfit-member', JSON.stringify({
+        id: 'route-test-member',
+        email: 'route-test@example.test',
+        createdAt: new Date().toISOString(),
+      }));
+    });
+
+    await page.goto('/dashboard');
+    await page.evaluate(() => {
+      window.history.pushState({}, '', '/session/%E0%A4');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+
+    await expect(page.getByRole('heading', { name: 'Workout not found' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Back to workouts' })).toBeVisible();
   });
 
   test('Invalid API endpoint or backend route returns clean error handling', async ({ page, request }) => {
-    // Test direct backend request to a fake endpoint if API_URL is active
     const apiBase = process.env.VITE_API_URL;
     if (apiBase) {
       const res = await request.fetch(`${apiBase}/fake-nonexistent-endpoint-999/`, {
         method: 'GET',
       });
-      // Should return a 404 Not Found rather than crashing the server
       expect(res.status()).toBe(404);
     }
   });

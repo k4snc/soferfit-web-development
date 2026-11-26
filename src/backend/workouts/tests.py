@@ -116,3 +116,21 @@ class SavedWorkoutPlanAccessTests(APITestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(SavedWorkoutPlan.objects.count(), 0)
+
+
+class RecommendedProgramTests(APITestCase):
+    def test_missing_fitness_profile_returns_validation_response(self):
+        user = User.objects.create_user(
+            username="profile-missing",
+            password="test-pass-123",
+        )
+        user.fitness_profile.delete()
+        self.client.force_authenticate(user=user)
+
+        response = self.client.get("/api/workouts/programs/recommended/")
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.data["error"],
+            "Please complete your fitness assessment first.",
+        )

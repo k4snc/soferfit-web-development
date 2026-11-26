@@ -2,10 +2,12 @@ from django.shortcuts import render
 from django.db import transaction
 from datetime import date
 from rest_framework import viewsets, status
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.views import APIView
+from accounts.models import FitnessProfile
 from accounts.permissions import IsContentAdmin
 from .models import Exercise, Workout, Program, ProgramDay, UserChallenge, WorkoutSession, SavedWorkoutPlan
 from .serializers import (
@@ -16,6 +18,7 @@ from .serializers import (
 
 class SavedWorkoutPlanView(APIView):
     permission_classes = [IsAuthenticated]
+    pagination_class = None  # Disable pagination for session list to match test expectations
 
     def get(self, request):
         plan = SavedWorkoutPlan.objects.filter(user=request.user).first()
@@ -41,10 +44,13 @@ class SavedWorkoutPlanView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+from rest_framework.pagination import PageNumberPagination
+
 class ExerciseViewSet(viewsets.ModelViewSet):
     queryset = Exercise.objects.all().order_by('-created_at')
     serializer_class = ExerciseSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
+    pagination_class = PageNumberPagination
 
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
@@ -56,11 +62,13 @@ class WorkoutViewSet(viewsets.ModelViewSet):
     queryset = Workout.objects.all().order_by('-created_at')
     serializer_class = WorkoutSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
+    pagination_class = PageNumberPagination
 
     def get_permissions(self):
         if self.action in ['create', 'update', 'partial_update', 'destroy']:
             return [IsContentAdmin()]
         return super().get_permissions()
+
 
     @action(detail=False, methods=['GET'], url_path='today', permission_classes=[IsAuthenticated])
     def today_workout(self, request):
@@ -122,20 +130,22 @@ class ProgramViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['GET'], permission_classes=[IsAuthenticated])
     def recommended(self, request):
-        try:
-            profile = request.user.fitness_profile
-            programs = Program.objects.filter(
-                fitness_level=profile.fitness_level,
-                fitness_goal=profile.fitness_goal
-            )
-            serializer = self.get_serializer(programs, many=True)
-            return Response(serializer.data)
-        except Exception as e:
+        profile = FitnessProfile.objects.filter(user=request.user).first()
+        if profile is None:
             return Response({"error": "Please complete your fitness assessment first."}, status=status.HTTP_400_BAD_REQUEST)
- 
+
+        programs = Program.objects.filter(
+            fitness_level=profile.fitness_level,
+            fitness_goal=profile.fitness_goal,
+        )
+        serializer = self.get_serializer(programs, many=True)
+        return Response(serializer.data)
+
+
 class UserChallengeViewSet(viewsets.ModelViewSet):
     serializer_class = UserChallengeSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = None  # Disable pagination for session list to match test expectations
 
     def get_queryset(self):
         return UserChallenge.objects.filter(user=self.request.user)
@@ -149,6 +159,7 @@ class UserChallengeViewSet(viewsets.ModelViewSet):
 class WorkoutSessionViewSet(viewsets.ModelViewSet):
     serializer_class = WorkoutSessionSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = None  # Disable pagination for session list to match test expectations
 
     def get_queryset(self):
         return WorkoutSession.objects.filter(user=self.request.user).order_by('-date', '-created_at')
@@ -190,6 +201,7 @@ class WorkoutSessionViewSet(viewsets.ModelViewSet):
 class PhysicalProgressViewSet(viewsets.ModelViewSet):
     serializer_class = PhysicalProgressSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = None  # Disable pagination for session list to match test expectations
 
     def get_queryset(self):
         return PhysicalProgress.objects.filter(user=self.request.user)

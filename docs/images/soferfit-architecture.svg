@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="620" viewBox="0 0 1200 620" role="img" aria-labelledby="title desc">
+  <title id="title">SoferFit system architecture</title>
+  <desc id="desc">A React and TypeScript frontend communicates with a Django REST API. The API uses PostgreSQL for persistent data and Redis for throttling and cache. The browser also uses local storage for demo data and JWT tokens. GitHub Actions validates the frontend and backend.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 z" fill="#2f6feb"/>
+    </marker>
+    <marker id="arrow-ci" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8250df"/>
+    </marker>
+    <style>
+      .title { font: 700 28px Arial, sans-serif; fill: #172033; }
+      .subtitle { font: 400 15px Arial, sans-serif; fill: #536071; }
+      .node-title { font: 700 18px Arial, sans-serif; fill: #172033; }
+      .node-text { font: 400 14px Arial, sans-serif; fill: #394556; }
+      .boundary-label { font: 700 14px Arial, sans-serif; fill: #536071; letter-spacing: .5px; }
+      .edge-label { font: 400 13px Arial, sans-serif; fill: #536071; }
+    </style>
+  </defs>
+
+  <rect width="1200" height="620" fill="#f7f9fc"/>
+  <text x="60" y="55" class="title">SoferFit system architecture</text>
+  <text x="60" y="82" class="subtitle">Local development and CI view</text>
+
+  <!-- Docker boundary -->
+  <rect x="330" y="125" width="810" height="310" rx="18" fill="#eef4ff" stroke="#8bb4f8" stroke-width="2" stroke-dasharray="9 7"/>
+  <text x="355" y="153" class="boundary-label">DOCKER COMPOSE DEVELOPMENT STACK</text>
+
+  <!-- Nodes -->
+  <rect x="55" y="180" width="225" height="105" rx="14" fill="#ffffff" stroke="#2f6feb" stroke-width="2"/>
+  <text x="82" y="216" class="node-title">Browser / React UI</text>
+  <text x="82" y="242" class="node-text">Vite + TypeScript</text>
+  <text x="82" y="264" class="node-text">Pages, forms, dashboard</text>
+
+  <rect x="385" y="190" width="245" height="115" rx="14" fill="#ffffff" stroke="#2f6feb" stroke-width="2"/>
+  <text x="420" y="227" class="node-title">Django REST API</text>
+  <text x="420" y="252" class="node-text">Gunicorn + DRF</text>
+  <text x="420" y="274" class="node-text">Accounts and workouts</text>
+
+  <rect x="735" y="175" width="205" height="95" rx="14" fill="#ffffff" stroke="#1a7f37" stroke-width="2"/>
+  <text x="782" y="212" class="node-title">PostgreSQL</text>
+  <text x="782" y="237" class="node-text">Persistent application data</text>
+
+  <rect x="975" y="305" width="145" height="90" rx="14" fill="#ffffff" stroke="#d29922" stroke-width="2"/>
+  <text x="1016" y="341" class="node-title">Redis</text>
+  <text x="1001" y="366" class="node-text">Cache and throttling</text>
+
+  <rect x="55" y="355" width="225" height="95" rx="14" fill="#ffffff" stroke="#8250df" stroke-width="2"/>
+  <text x="105" y="392" class="node-title">Browser storage</text>
+  <text x="91" y="417" class="node-text">Demo data and JWT tokens</text>
+
+  <rect x="385" y="355" width="245" height="95" rx="14" fill="#ffffff" stroke="#8250df" stroke-width="2"/>
+  <text x="443" y="392" class="node-title">GitHub Actions</text>
+  <text x="419" y="417" class="node-text">Build, checks, tests, CI</text>
+
+  <!-- Runtime edges -->
+  <line x1="280" y1="232" x2="385" y2="232" stroke="#2f6feb" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="294" y="219" class="edge-label">HTTP JSON + JWT</text>
+
+  <line x1="630" y1="230" x2="735" y2="220" stroke="#2f6feb" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="650" y="205" class="edge-label">ORM queries</text>
+
+  <line x1="630" y1="275" x2="975" y2="340" stroke="#2f6feb" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="730" y="320" class="edge-label">Cache / throttle</text>
+
+  <line x1="167" y1="285" x2="167" y2="355" stroke="#8250df" stroke-width="3" marker-end="url(#arrow-ci)"/>
+  <text x="181" y="330" class="edge-label">localStorage</text>
+
+  <!-- CI edges -->
+  <line x1="510" y1="355" x2="510" y2="305" stroke="#8250df" stroke-width="3" stroke-dasharray="7 5" marker-end="url(#arrow-ci)"/>
+  <line x1="510" y1="355" x2="167" y2="285" stroke="#8250df" stroke-width="3" stroke-dasharray="7 5" marker-end="url(#arrow-ci)"/>
+  <text x="565" y="345" class="edge-label">validates code and tests</text>
+
+  <!-- Legend -->
+  <line x1="70" y1="535" x2="120" y2="535" stroke="#2f6feb" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="132" y="540" class="edge-label">Runtime request or data flow</text>
+  <line x1="380" y1="535" x2="430" y2="535" stroke="#8250df" stroke-width="3" stroke-dasharray="7 5" marker-end="url(#arrow-ci)"/>
+  <text x="442" y="540" class="edge-label">Validation flow</text>
+</svg>
