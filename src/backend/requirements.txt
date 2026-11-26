@@ -6,7 +6,7 @@ djangorestframework_simplejwt==5.5.1
 psycopg2-binary==2.9.13
 PyJWT==2.15.1
 python-dotenv==1.2.4
-redis==5.2.1
+redis==8.2.0
 sqlparse==0.6.0
 sentry-sdk==2.12.0
 
